@@ -3,7 +3,7 @@ import os
 from models import Position
 
 class CSVLogger:
-    def __init__(self, filename="logs.csv"):
+    def __init__(self, filename="logs/logs.csv"):
         self.filename = filename
 
     def write(self, position: Position):
