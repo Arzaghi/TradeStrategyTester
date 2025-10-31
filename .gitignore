@@ -1,0 +1,10 @@
+__pycache__/api.cpython-312.pyc
+__pycache__/models.cpython-312.pyc
+__pycache__/persistence.cpython-312.pyc
+__pycache__/strategy.cpython-312.pyc
+__pycache__/trader.cpython-312.pyc
+__pycache__/utils.cpython-312.pyc
+tests/__pycache__/test_api.cpython-312.pyc
+tests/__pycache__/test_persistence.cpython-312.pyc
+tests/__pycache__/test_strategy.cpython-312.pyc
+tests/__pycache__/test_trader.cpython-312.pyc
