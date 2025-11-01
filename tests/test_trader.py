@@ -21,8 +21,11 @@ class MockStrategy:
     def generate_signal(self, candles):
         if not self.called:
             self.called = True
-            return Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 120, "OPEN", "Buy", time.time())
-        return None
+            return [
+                Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 120, "OPEN", "Buy", time.time(), rr_ratio=1.0),
+                Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 135, "OPEN", "Buy", time.time(), rr_ratio=2.0)
+            ]
+        return []
 
 class MockLogger:
     def __init__(self):
@@ -32,19 +35,27 @@ class MockLogger:
         self.logged.append(pos)
 
 class TestTraderBot(unittest.TestCase):
-    def test_tick_opens_and_closes_position(self):
+    def test_tick_opens_and_closes_positions(self):
         api = MockAPI()
         strategy = MockStrategy()
         logger = MockLogger()
         bot = TraderBot("BTCUSDT", "1h", api, strategy, logger)
 
-        # First tick: open position
+        # First tick: open positions
         active = bot.tick(110)
-        self.assertEqual(len(active), 1)
-        self.assertEqual(active[0].status, "OPEN")
+        self.assertEqual(len(active), 2)
+        self.assertEqual(len(logger.logged), 0)
+        for pos in active:
+            self.assertEqual(pos.status, "OPEN")
 
-        # Second tick: price hits TP
+        # Second tick: price hits TP for the first
         active = bot.tick(121)
-        self.assertEqual(len(active), 0)
+        self.assertEqual(len(active), 1)
         self.assertEqual(len(logger.logged), 1)
         self.assertEqual(logger.logged[0].status, "TAKE PROFIT HIT")
+
+        # Third tick: price hits SL for the second position
+        active = bot.tick(89)
+        self.assertEqual(len(active), 0)
+        self.assertEqual(len(logger.logged), 2)
+        self.assertEqual(logger.logged[1].status, "STOP LOSS HIT")

@@ -9,10 +9,10 @@ class HammerCandle(Enum):
     BEARISH_HAMMER = 2
 
 class StrategyAllCandles:
-    def __init__(self, symbol, interval, reward_to_risk_ratio=1.0):
+    def __init__(self, symbol, interval, reward_to_risk_ratios=[1.0]):
         self.symbol = symbol
         self.interval = interval
-        self.reward_to_risk_ratio = reward_to_risk_ratio
+        self.reward_to_risk_ratios = reward_to_risk_ratios
         self.last_candle_time = None
 
     def generate_signal(self, candles):
@@ -22,30 +22,33 @@ class StrategyAllCandles:
         readable_time = datetime.fromtimestamp(prev[0] / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
         if self.last_candle_time == readable_time:
-            return None
+            return []
 
         self.last_candle_time = readable_time
         entry = close
+        positions = []
 
         if close > open_:
             sl = low
             risk = entry - sl
-            tp = entry + risk * self.reward_to_risk_ratio
-            return Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Buy", time.time(), rr_ratio=self.reward_to_risk_ratio)
+            for rr in self.reward_to_risk_ratios:
+                tp = entry + risk * rr
+                positions.append(Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Buy", time.time(), rr_ratio=rr))
 
         elif close < open_:
             sl = high
             risk = sl - entry
-            tp = entry - risk * self.reward_to_risk_ratio
-            return Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Sell", time.time(), rr_ratio=self.reward_to_risk_ratio)
+            for rr in self.reward_to_risk_ratios:
+                tp = entry - risk * rr
+                positions.append(Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Sell", time.time(), rr_ratio=rr))
 
-        return None
+        return positions
 
 class StrategyHammerCandles:
-    def __init__(self, symbol, interval, reward_to_risk_ratio=1.0):
+    def __init__(self, symbol, interval, reward_to_risk_ratios=[1.0]):
         self.symbol = symbol
         self.interval = interval
-        self.reward_to_risk_ratio = reward_to_risk_ratio
+        self.reward_to_risk_ratios = reward_to_risk_ratios
         self.last_candle_time = None
 
     def candle_hammer_type(self, open_, high, low, close):
@@ -80,23 +83,26 @@ class StrategyHammerCandles:
         readable_time = datetime.fromtimestamp(prev[0] / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
         if self.last_candle_time == readable_time:
-            return None
+            return []
 
         self.last_candle_time = readable_time
         hammer_type = self.candle_hammer_type(open_, high, low, close)
+        positions = []
 
         if hammer_type == HammerCandle.BULLISH_HAMMER:
             entry = high
             sl = low
             risk = entry - sl
-            tp = entry + risk * self.reward_to_risk_ratio
-            return Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Buy", time.time(), rr_ratio=self.reward_to_risk_ratio)
+            for rr in self.reward_to_risk_ratios:
+                tp = entry + risk * rr
+                positions.append(Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Buy", time.time(), rr_ratio=rr))
 
         elif hammer_type == HammerCandle.BEARISH_HAMMER:
             entry = low
             sl = high
             risk = sl - entry
-            tp = entry - risk * self.reward_to_risk_ratio
-            return Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Sell", time.time(), rr_ratio=self.reward_to_risk_ratio)
+            for rr in self.reward_to_risk_ratios:
+                tp = entry - risk * rr
+                positions.append(Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Sell", time.time(), rr_ratio=rr))
 
-        return
+        return positions

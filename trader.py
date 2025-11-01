@@ -14,23 +14,31 @@ class TraderBot:
     def tick(self, current_price: float):
         candles = self.api.get_candles(self.symbol, self.interval)
 
-        new_position = self.strategy.generate_signal(candles)
-        if new_position:
-            self.positions.append(new_position)
+        new_positions = self.strategy.generate_signal(candles)
+        if new_positions:
+            self.positions.extend(new_positions)
 
         active = []
         for pos in self.positions:
             if pos.status == "OPEN":
                 if pos.type == "Buy":
                     if current_price <= pos.sl:
-                        pos.status, pos.exit_price, pos.exit_reason = "STOP LOSS HIT", current_price, "SL"
+                        pos.status = "STOP LOSS HIT"
+                        pos.exit_price = current_price
+                        pos.exit_reason = "SL"
                     elif current_price >= pos.tp:
-                        pos.status, pos.exit_price, pos.exit_reason = "TAKE PROFIT HIT", current_price, "TP"
+                        pos.status = "TAKE PROFIT HIT"
+                        pos.exit_price = current_price
+                        pos.exit_reason = "TP"
                 elif pos.type == "Sell":
                     if current_price >= pos.sl:
-                        pos.status, pos.exit_price, pos.exit_reason = "STOP LOSS HIT", current_price, "SL"
+                        pos.status = "STOP LOSS HIT"
+                        pos.exit_price = current_price
+                        pos.exit_reason = "SL"
                     elif current_price <= pos.tp:
-                        pos.status, pos.exit_price, pos.exit_reason = "TAKE PROFIT HIT", current_price, "TP"
+                        pos.status = "TAKE PROFIT HIT"
+                        pos.exit_price = current_price
+                        pos.exit_reason = "TP"
 
             if pos.status != "OPEN":
                 pos.close_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

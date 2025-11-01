@@ -7,13 +7,13 @@ from trader import TraderBot
 from utils import clear_screen, OutputBuffer
 
 symbols = ["BTCUSDT"]
-intervals = ["15m", "1h", "4h"]
-ratios = [1,2,3,4,5]
+intervals = ["5m", "15m", "1h", "4h"]
+ratios = [1,2,3,4,5,6,7,8,9,10]
 
 outputBuffer = OutputBuffer()
 api = BinanceAPI()
 logger = CSVLogger()
-bots = [TraderBot(s, i, api, StrategyHammerCandles(s, i, r), logger) for s in symbols for i in intervals for r in ratios]
+bots = [TraderBot(s, i, api, StrategyHammerCandles(s, i, ratios), logger) for s in symbols for i in intervals]
 
 all_active_positions = []
 
@@ -34,7 +34,7 @@ while True:
                 symbol_prices[symbol] = api.get_current_price(symbol)
             except Exception as e:
                 outputBuffer.add(f"Error fetching price for {symbol}: {e}")
-                symbol_prices[symbol] = None  # fallback
+                symbol_prices[symbol] = None
 
 
         for bot in bots:
