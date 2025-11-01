@@ -4,8 +4,9 @@ from api import BinanceAPI
 from strategy import *
 from persistence import CSVLogger
 from trader import TraderBot
-from utils import clear_screen, OutputBuffer
+from utils import clear_screen, get_git_commit_hash, OutputBuffer
 
+CURRENT_VERSION_HASH = get_git_commit_hash()
 symbols = ["BTCUSDT"]
 intervals = ["5m", "15m", "1h", "4h"]
 ratios = [1,2,3,4,5,6,7,8,9,10]
@@ -19,8 +20,8 @@ all_active_positions = []
 
 while True:
     try:
-        
-        outputBuffer.add(f"--- StrategyHammerCandles Monitor --- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        outputBuffer.add(f"Version: {CURRENT_VERSION_HASH}")
+        outputBuffer.add(f"StrategyHammerCandles Monitor : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         outputBuffer.add("Open Positions:")
         for i, pos in enumerate(all_active_positions[::-1], 1):
             outputBuffer.add(f"{i}. {pos.symbol} | {pos.interval} | {pos.type} | Entry: {pos.entry:.2f}, SL: {pos.sl:.2f}, TP: {pos.tp:.2f}, RR: {pos.rr_ratio}, Status: {pos.status}")

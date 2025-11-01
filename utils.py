@@ -4,6 +4,9 @@ def clear_screen():
     """Clear the terminal screen."""
     os.system('cls' if os.name == 'nt' else 'clear')
 
+def get_git_commit_hash():
+    return os.getenv("COMMIT_HASH", "local version running")
+
 class OutputBuffer:
     def __init__(self):
         self.lines = []

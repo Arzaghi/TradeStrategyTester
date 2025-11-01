@@ -1,6 +1,10 @@
 # Use slim Python base image
 FROM python:3.11-slim
 
+# Declare build-time argument and set it as environment variable
+ARG COMMIT_HASH
+ENV COMMIT_HASH=$COMMIT_HASH
+
 # Set working directory
 WORKDIR /app
 
