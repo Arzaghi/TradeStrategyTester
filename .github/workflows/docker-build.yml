@@ -48,4 +48,5 @@ jobs:
         script: |
           docker pull arzaghi/trader-bot:latest
           docker stop traderBot || true
+          docker remove traderBot || true
           docker run --rm -t -d --name traderBot arzaghi/trader-bot:latest

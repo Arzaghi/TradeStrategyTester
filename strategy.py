@@ -88,9 +88,9 @@ class StrategyHammerCandles:
         self.last_candle_time = readable_time
         hammer_type = self.candle_hammer_type(open_, high, low, close)
         positions = []
+        entry = close
 
         if hammer_type == HammerCandle.BULLISH_HAMMER:
-            entry = high
             sl = low
             risk = entry - sl
             for rr in self.reward_to_risk_ratios:
@@ -98,7 +98,6 @@ class StrategyHammerCandles:
                 positions.append(Position(self.symbol, self.interval, candle_time, readable_time, entry, sl, tp, "OPEN", "Buy", time.time(), rr_ratio=rr))
 
         elif hammer_type == HammerCandle.BEARISH_HAMMER:
-            entry = low
             sl = high
             risk = sl - entry
             for rr in self.reward_to_risk_ratios:
