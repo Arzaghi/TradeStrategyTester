@@ -7,9 +7,6 @@ WORKDIR /app
 # Copy all source files
 COPY . .
 
-# Create logs folder
-RUN mkdir -p /app/logs
-
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
