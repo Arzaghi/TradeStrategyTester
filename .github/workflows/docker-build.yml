@@ -37,3 +37,15 @@ jobs:
 
     - name: Push Docker image
       run: docker push arzaghi/trader-bot:latest
+
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        port: ${{ secrets.SSH_PORT }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          docker pull arzaghi/trader-bot:latest
+          docker stop traderBot || true
+          docker run --rm -t -d --name traderBot arzaghi/trader-bot:latest
