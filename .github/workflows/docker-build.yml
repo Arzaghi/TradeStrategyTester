@@ -63,3 +63,7 @@ jobs:
 
           echo "Starting new container..."
           docker run -t -d --name traderBot arzaghi/trader-bot:latest
+          docker run -d --name traderBot \
+            -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
+            -e TELEGRAM_CHANNEL_ID=${{ secrets.TELEGRAM_CHANNEL_ID }} \
+            arzaghi/trader-bot:latest

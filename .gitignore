@@ -1,16 +1,6 @@
-__pycache__/api.cpython-312.pyc
-__pycache__/models.cpython-312.pyc
-__pycache__/persistence.cpython-312.pyc
-__pycache__/strategy.cpython-312.pyc
-__pycache__/trader.cpython-312.pyc
-__pycache__/utils.cpython-312.pyc
-tests/__pycache__/test_api.cpython-312.pyc
-tests/__pycache__/test_persistence.cpython-312.pyc
-tests/__pycache__/test_strategy.cpython-312.pyc
-tests/__pycache__/test_trader.cpython-312.pyc
-__pycache__/__init__.cpython-312.pyc
-tests/__pycache__/__init__.cpython-312.pyc
-tests/__pycache__/test_api.cpython-312-pytest-8.3.4.pyc
-tests/__pycache__/test_persistence.cpython-312-pytest-8.3.4.pyc
-tests/__pycache__/test_strategy.cpython-312-pytest-8.3.4.pyc
-tests/__pycache__/test_trader.cpython-312-pytest-8.3.4.pyc
+# Ignore all Python bytecode files
+*.pyc
+
+# Ignore all __pycache__ directories recursively
+__pycache__/
+**/__pycache__/

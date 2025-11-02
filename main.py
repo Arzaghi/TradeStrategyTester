@@ -1,10 +1,12 @@
 import time
+import os
 from datetime import datetime
 from api import BinanceAPI
 from strategy import *
 from persistence import CSVLogger
 from trader import TraderBot
 from utils import clear_screen, get_git_commit_hash, OutputBuffer
+from telegram_notifier import TelegramNotifier
 
 CURRENT_VERSION_HASH = get_git_commit_hash()
 symbols = ["BTCUSDT","ETHUSDT"]
@@ -12,6 +14,7 @@ intervals = ["15m", "1h", "4h"]
 ratios = [1,2]
 
 outputBuffer = OutputBuffer()
+telegram = TelegramNotifier(os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHANNEL_ID")) # Read from Github secrets and set it in docker image
 api = BinanceAPI()
 logger = CSVLogger()
 bots = [TraderBot(s, i, api, StrategyHammerCandles(s, i, ratios), logger) for s in symbols for i in intervals]
