@@ -7,9 +7,9 @@ from trader import TraderBot
 from utils import clear_screen, get_git_commit_hash, OutputBuffer
 
 CURRENT_VERSION_HASH = get_git_commit_hash()
-symbols = ["BTCUSDT"]
-intervals = ["5m", "15m", "1h", "4h"]
-ratios = [1,2,3,4,5,6,7,8,9,10]
+symbols = ["BTCUSDT","ETHUSDT"]
+intervals = ["15m", "1h", "4h"]
+ratios = [1,2]
 
 outputBuffer = OutputBuffer()
 api = BinanceAPI()
@@ -44,7 +44,7 @@ while True:
                 active_positions = bot.tick(price)
                 all_active_positions.extend(active_positions)
 
-        clear_screen()
+        outputBuffer.add("----------------------------------------------------------------------")
         outputBuffer.flush()
         time.sleep(2)
 

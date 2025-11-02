@@ -46,7 +46,20 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         script: |
+          set -e
+
+          echo "Stopping existing container if running..."
+          if docker ps -q -f name=traderBot; then
+            docker stop traderBot || echo "Failed to stop traderBot"
+          fi
+
+          echo "Pulling latest image..."
           docker pull arzaghi/trader-bot:latest
-          docker stop traderBot || true
-          docker remove traderBot || true
-          docker run --rm -t -d --name traderBot arzaghi/trader-bot:latest
+
+          echo "Removing existing container if exists..."
+          if docker ps -a -q -f name=traderBot; then
+            docker rm traderBot || echo "Failed to remove traderBot"
+          fi
+
+          echo "Starting new container..."
+          docker run -t -d --name traderBot arzaghi/trader-bot:latest
