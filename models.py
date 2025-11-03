@@ -18,3 +18,10 @@ class Position:
     exit_price: float = 0.0
     exit_reason: str = ""
     rr_ratio: float = 1.0
+
+
+@dataclass
+class Signal:
+    entry: float
+    sl: float
+    type: str

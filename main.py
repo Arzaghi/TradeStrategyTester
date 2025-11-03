@@ -7,51 +7,31 @@ from persistence import CSVLogger
 from trader import TraderBot
 from utils import clear_screen, get_git_commit_hash, OutputBuffer
 from telegram_notifier import TelegramNotifier
+from strategy_watcher import CoinWatcher
+from strategy import StrategyHammerCandles
 
 CURRENT_VERSION_HASH = get_git_commit_hash()
-symbols = ["BTCUSDT","ETHUSDT"]
-intervals = ["15m", "1h", "4h"]
-ratios = [1,2]
+symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT"]
+intervals = ["5m", "15m", "30m", "1h", "4h", "1d", "1w"]
 
 outputBuffer = OutputBuffer()
 telegram = TelegramNotifier(os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHANNEL_ID")) # Read from Github secrets and set it in docker image
 api = BinanceAPI()
 logger = CSVLogger()
-bots = [TraderBot(s, i, api, StrategyHammerCandles(s, i, ratios), logger) for s in symbols for i in intervals]
+strategy = StrategyHammerCandles()
+watchers = [CoinWatcher(symbol, interval, api, strategy, telegram) for symbol in symbols for interval in intervals]
 
-all_active_positions = []
+
+Message= ""
+Message += f"Started Version On Server: {CURRENT_VERSION_HASH}\n"
+Message += "Number of Watchers: " + str(len(watchers)) + "\n"
+Message += "Watching Coins: " + str(symbols) + "\n"
+Message += "Watching TimeFrames: " + str(intervals) + "\n"
+print(Message)
+telegram.send_message(Message)
+
 
 while True:
-    try:
-        outputBuffer.add(f"Version: {CURRENT_VERSION_HASH}")
-        outputBuffer.add(f"StrategyHammerCandles Monitor : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        outputBuffer.add("Open Positions:")
-        for i, pos in enumerate(all_active_positions[::-1], 1):
-            outputBuffer.add(f"{i}. {pos.symbol} | {pos.interval} | {pos.type} | Entry: {pos.entry:.2f}, SL: {pos.sl:.2f}, TP: {pos.tp:.2f}, RR: {pos.rr_ratio}, Status: {pos.status}")
-
-        all_active_positions = []
-
-        # Cache current prices per symbol
-        symbol_prices = {}
-        for symbol in symbols:
-            try:
-                symbol_prices[symbol] = api.get_current_price(symbol)
-            except Exception as e:
-                outputBuffer.add(f"Error fetching price for {symbol}: {e}")
-                symbol_prices[symbol] = None
-
-
-        for bot in bots:
-            price = symbol_prices.get(bot.symbol)
-            if price is not None:
-                active_positions = bot.tick(price)
-                all_active_positions.extend(active_positions)
-
-        outputBuffer.add("----------------------------------------------------------------------")
-        outputBuffer.flush()
-        time.sleep(2)
-
-    except Exception as e:
-        outputBuffer.add(f"Error: {e}")
-        outputBuffer.flush()
-        time.sleep(5)
+    for watcher in watchers:
+        watcher.tick()
+    time.sleep(1)

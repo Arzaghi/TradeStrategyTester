@@ -21,7 +21,7 @@ class TraderBot:
         active = []
         for pos in self.positions:
             if pos.status == "OPEN":
-                if pos.type == "Buy":
+                if pos.type == "Long":
                     if current_price <= pos.sl:
                         pos.status = "STOP LOSS HIT"
                         pos.exit_price = current_price
@@ -30,7 +30,7 @@ class TraderBot:
                         pos.status = "TAKE PROFIT HIT"
                         pos.exit_price = current_price
                         pos.exit_reason = "TP"
-                elif pos.type == "Sell":
+                elif pos.type == "Short":
                     if current_price >= pos.sl:
                         pos.status = "STOP LOSS HIT"
                         pos.exit_price = current_price

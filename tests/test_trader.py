@@ -22,8 +22,8 @@ class MockStrategy:
         if not self.called:
             self.called = True
             return [
-                Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 120, "OPEN", "Buy", time.time(), rr_ratio=1.0),
-                Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 135, "OPEN", "Buy", time.time(), rr_ratio=2.0)
+                Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 120, "OPEN", "Long", time.time(), rr_ratio=1.0),
+                Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 135, "OPEN", "Long", time.time(), rr_ratio=2.0)
             ]
         return []
 

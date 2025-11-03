@@ -1,9 +1,12 @@
 import requests
+from datetime import datetime
 
 class BinanceAPI:
     BASE_URL = "https://api.binance.com/api/v3"
 
     def get_candles(self, symbol, interval, limit=2):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{timestamp}] API Called → Symbol: {symbol} | Interval: {interval} | Limit: {limit}")
         response = requests.get(f"{self.BASE_URL}/klines", params={
             "symbol": symbol,
             "interval": interval,

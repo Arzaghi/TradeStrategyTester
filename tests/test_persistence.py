@@ -18,7 +18,7 @@ class TestCSVLogger(unittest.TestCase):
             sl=90,
             tp=110,
             status="STOP LOSS HIT",
-            type="Buy",
+            type="Long",
             start_timestamp=time.time(),
             close_time="2023-01-01 01:00:00",
             duration=3600,
