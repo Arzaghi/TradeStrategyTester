@@ -12,6 +12,11 @@ class TelegramNotifier:
             "text": text,
             "parse_mode": parse_mode
         }
-        response = requests.post(self.api_url, data=payload)
-        response.raise_for_status()
-        return response.json()
+
+        try:
+            response = requests.post(self.api_url, data=payload)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"[TelegramNotifier] Failed to send message: {e}")
+            return None

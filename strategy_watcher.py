@@ -1,7 +1,6 @@
 import time
-from models import Signal
-from datetime import datetime, timedelta
-
+from models import Signal, Position
+from datetime import datetime, timedelta, timezone
 
 class CoinWatcher:
     def __init__(self, symbol: str, interval: str, api, strategy, notifier):
@@ -12,22 +11,40 @@ class CoinWatcher:
         self.notifier = notifier
         self.last_processed_candle_time = None
 
-    def watch(self):
+    def watch(self) -> Position | None:
         try:
             if not self._is_new_candle_due():
-                return
+                return None
 
             candles = self.api.get_candles(self.symbol, self.interval, limit=self.strategy.REQUIRED_CANDLES)
             current_candle_time = candles[-1][0]
             if self.last_processed_candle_time == current_candle_time:
-                return
+                return None
 
             self.last_processed_candle_time = current_candle_time
             signal = self.strategy.generate_signal(candles)
-            if signal:
-                self.send_alert(signal)
+            if not signal:
+                return None
+
+            self.send_alert(signal)
+
+            position = Position(
+                symbol=self.symbol,
+                interval=self.interval,
+                candle_time=current_candle_time,
+                open_time=datetime.fromtimestamp(current_candle_time / 1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
+                entry=signal.entry,
+                sl=signal.sl,
+                tp=signal.tp,
+                status="open",
+                type=signal.type,
+                start_timestamp=time.time()
+            )
+            return position
+
         except Exception as e:
             print(f"[{self.symbol} {self.interval}] Error: {e}")
+            return None
 
     def get_next_candle_time(last_candle_ms: int, interval: str) -> datetime:
         last_dt = datetime.fromtimestamp(last_candle_ms / 1000)

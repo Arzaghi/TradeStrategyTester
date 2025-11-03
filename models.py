@@ -24,4 +24,5 @@ class Position:
 class Signal:
     entry: float
     sl: float
+    tp: float
     type: str

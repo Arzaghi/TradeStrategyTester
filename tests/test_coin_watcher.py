@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from strategy_watcher import CoinWatcher
-from models import Signal
+from models import Signal, Position
 from datetime import datetime, timedelta
 import time
 
@@ -20,7 +20,6 @@ class TestCoinWatcher(unittest.TestCase):
         self.assertTrue(self.watcher._is_new_candle_due())
 
     def test_new_candle_due_logic(self):
-        # Simulate last candle at 15m boundary
         now = int(time.time() * 1000)
         interval_ms = 15 * 60_000
         self.watcher.last_processed_candle_time = now - interval_ms
@@ -31,22 +30,24 @@ class TestCoinWatcher(unittest.TestCase):
         self.watcher.last_processed_candle_time = now
         self.assertFalse(self.watcher._is_new_candle_due())
 
-    def test_tick_skips_if_no_new_candle_due(self):
+    def test_watch_skips_if_no_new_candle_due(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=False)
-        self.watcher.watch()
+        result = self.watcher.watch()
         self.api.get_candles.assert_not_called()
+        self.assertIsNone(result)
 
-    def test_tick_skips_if_duplicate_candle(self):
+    def test_watch_skips_if_duplicate_candle(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=True)
         self.api.get_candles.return_value = [[123, "100", "110", "90", "105"], [123, "105", "115", "95", "110"]]
         self.watcher.last_processed_candle_time = 123
-        self.watcher.watch()
+        result = self.watcher.watch()
         self.notifier.send_message.assert_not_called()
+        self.assertIsNone(result)
 
-    def test_tick_sends_alert_on_signal(self):
+    def test_watch_sends_alert_on_signal(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=True)
         self.api.get_candles.return_value = [[123, "100", "110", "90", "105"], [124, "105", "115", "95", "110"]]
-        self.strategy.generate_signal = MagicMock(return_value=Signal(entry=110.0, sl=90.0, type="Long"))
+        self.strategy.generate_signal = MagicMock(return_value=Signal(entry=105.0, sl=95.0, tp=115.0, type="Long"))
         self.watcher.watch()
         self.notifier.send_message.assert_called_once()
         args, kwargs = self.notifier.send_message.call_args
@@ -54,12 +55,43 @@ class TestCoinWatcher(unittest.TestCase):
         self.assertIn("Stop Loss", args[0])
         self.assertEqual(kwargs["parse_mode"], "Markdown")
 
-    def test_tick_no_alert_if_no_signal(self):
+    def test_watch_no_alert_if_no_signal(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=True)
         self.api.get_candles.return_value = [[123, "100", "110", "90", "105"], [124, "105", "115", "95", "110"]]
         self.strategy.generate_signal = MagicMock(return_value=None)
-        self.watcher.watch()
+        result = self.watcher.watch()
         self.notifier.send_message.assert_not_called()
+        self.assertIsNone(result)
+
+    def test_watch_returns_position_on_signal(self):
+        self.watcher._is_new_candle_due = MagicMock(return_value=True)
+        self.api.get_candles.return_value = [[1698768000000, "100", "110", "90", "105"], [1698768900000  , "105", "115", "95", "110"]]
+        self.strategy.generate_signal = MagicMock(return_value=Signal(entry=105.0, sl=95.0, tp=115.0, type="Long"))
+
+        position = self.watcher.watch()
+
+        self.assertIsInstance(position, Position)
+        self.assertEqual(position.symbol, self.symbol)
+        self.assertEqual(position.interval, self.interval)
+        self.assertEqual(position.candle_time, 1698768900000)
+        self.assertEqual(position.entry, 105.0)
+        self.assertEqual(position.sl, 95.0)
+        self.assertEqual(position.tp, 115.0)
+        self.assertEqual(position.status, "open")
+        self.assertEqual(position.type, "Long")
+        self.assertGreater(position.start_timestamp, 0)
+        self.assertGreater(position.start_timestamp, 0)
+        self.assertEqual(position.open_time, "2023-10-31 16:15:00")
+
+    def test_watch_returns_none_if_no_signal(self):
+        self.watcher._is_new_candle_due = MagicMock(return_value=True)
+        self.api.get_candles.return_value = [[123, "100", "110", "90", "105"], [124, "105", "115", "95", "110"]]
+        self.strategy.generate_signal = MagicMock(return_value=None)
+
+        position = self.watcher.watch()
+
+        self.assertIsNone(position)
+
 
     def test_5m_interval_exact(self):
         timeframe = "5m"
@@ -217,7 +249,7 @@ class TestCoinWatcher(unittest.TestCase):
 
         candle_time = int(time.time() * 1000)
         self.api.get_candles.return_value = [[candle_time, "100", "110", "90", "105"], [candle_time + 900_000, "105", "115", "95", "110"]]
-        self.strategy.generate_signal.return_value = Signal(entry=110.0, sl=90.0, type="Long")
+        self.strategy.generate_signal.return_value = Signal(entry=105.0, sl=95.0, tp=115.0, type="Long")
 
         self.watcher.watch()
 

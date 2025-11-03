@@ -43,13 +43,19 @@ class StrategyHammerCandles:
         if len(candles) < self.REQUIRED_CANDLES:
             return None
 
-        candle = candles[0] # Previous Closed Candle
-        open_, high, low, close = map(float, (candle[1], candle[2], candle[3], candle[4]))
-
+        open_, high, low, close = map(float, candles[0][1:5])
         hammer_type = self.candle_hammer_type(open_, high, low, close)
         if hammer_type == HammerCandle.BULLISH_HAMMER:
-            return Signal(entry=high, sl=low, type="Long")
+            bottom_shadow = min(open_, close) - low
+            sl = low + (bottom_shadow / 2)
+            tp = close + (close - sl)
+            return Signal(entry=close, sl=sl, tp=tp, type="Long")
+
         elif hammer_type == HammerCandle.BEARISH_HAMMER:
-            return Signal(entry=low, sl=high, type="Short")
+            top_shadow = high - max(open_, close)
+            sl = high - (top_shadow / 2)
+            tp = close - (sl - close)
+            return Signal(entry=close, sl=sl, tp=tp, type="Short")
+
         else:
-            return None
+            return

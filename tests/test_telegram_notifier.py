@@ -26,16 +26,15 @@ class TestTelegramNotifier(unittest.TestCase):
         self.assertEqual(result["result"]["message_id"], 1)
 
     @patch("telegram_notifier.requests.post")
-    def test_send_message_failure(self, mock_post):
+    def test_send_message_failure_does_not_throw(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 403
         mock_response.raise_for_status.side_effect = Exception("Forbidden")
         mock_post.return_value = mock_response
 
-        with self.assertRaises(Exception) as context:
-            self.notifier.send_message("This should fail")
+        result = self.notifier.send_message("This should fail")
 
-        self.assertIn("Forbidden", str(context.exception))
+        self.assertIsNone(result)
         mock_post.assert_called_once()
 
     @patch("telegram_notifier.requests.post")
