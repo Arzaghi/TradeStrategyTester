@@ -33,5 +33,5 @@ telegram.send_message(Message)
 
 while True:
     for watcher in watchers:
-        watcher.tick()
+        watcher.watch()
     time.sleep(1)

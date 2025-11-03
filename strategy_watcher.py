@@ -12,7 +12,7 @@ class CoinWatcher:
         self.notifier = notifier
         self.last_processed_candle_time = None
 
-    def tick(self):
+    def watch(self):
         try:
             if not self._is_new_candle_due():
                 return

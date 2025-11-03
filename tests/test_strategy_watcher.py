@@ -33,21 +33,21 @@ class TestCoinWatcher(unittest.TestCase):
 
     def test_tick_skips_if_no_new_candle_due(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=False)
-        self.watcher.tick()
+        self.watcher.watch()
         self.api.get_candles.assert_not_called()
 
     def test_tick_skips_if_duplicate_candle(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=True)
         self.api.get_candles.return_value = [[123, "100", "110", "90", "105"], [123, "105", "115", "95", "110"]]
         self.watcher.last_processed_candle_time = 123
-        self.watcher.tick()
+        self.watcher.watch()
         self.notifier.send_message.assert_not_called()
 
     def test_tick_sends_alert_on_signal(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=True)
         self.api.get_candles.return_value = [[123, "100", "110", "90", "105"], [124, "105", "115", "95", "110"]]
         self.strategy.generate_signal = MagicMock(return_value=Signal(entry=110.0, sl=90.0, type="Long"))
-        self.watcher.tick()
+        self.watcher.watch()
         self.notifier.send_message.assert_called_once()
         args, kwargs = self.notifier.send_message.call_args
         self.assertIn("Entry", args[0])
@@ -58,7 +58,7 @@ class TestCoinWatcher(unittest.TestCase):
         self.watcher._is_new_candle_due = MagicMock(return_value=True)
         self.api.get_candles.return_value = [[123, "100", "110", "90", "105"], [124, "105", "115", "95", "110"]]
         self.strategy.generate_signal = MagicMock(return_value=None)
-        self.watcher.tick()
+        self.watcher.watch()
         self.notifier.send_message.assert_not_called()
 
     def test_5m_interval_exact(self):
@@ -183,7 +183,7 @@ class TestCoinWatcher(unittest.TestCase):
         self.watcher._is_new_candle_due = MagicMock(return_value=False)
 
         for _ in range(5):
-            self.watcher.tick()
+            self.watcher.watch()
 
         self.api.get_candles.assert_not_called()
         self.notifier.send_message.assert_not_called()
@@ -201,12 +201,12 @@ class TestCoinWatcher(unittest.TestCase):
 
         self.strategy.generate_signal.return_value = None
 
-        # First tick should update last_processed_candle_time
-        self.watcher.tick()
+        # First watch should update last_processed_candle_time
+        self.watcher.watch()
         self.assertEqual(self.watcher.last_processed_candle_time, base_time + 900_000)
 
-        # Second tick should also call API
-        self.watcher.tick()
+        # Second watch should also call API
+        self.watcher.watch()
         self.assertEqual(self.watcher.last_processed_candle_time, base_time + 2 * 900_000)
 
         self.assertEqual(self.api.get_candles.call_count, 2)
@@ -219,7 +219,7 @@ class TestCoinWatcher(unittest.TestCase):
         self.api.get_candles.return_value = [[candle_time, "100", "110", "90", "105"], [candle_time + 900_000, "105", "115", "95", "110"]]
         self.strategy.generate_signal.return_value = Signal(entry=110.0, sl=90.0, type="Long")
 
-        self.watcher.tick()
+        self.watcher.watch()
 
         self.notifier.send_message.assert_called_once()
         args, kwargs = self.notifier.send_message.call_args
