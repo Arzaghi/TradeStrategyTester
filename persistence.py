@@ -15,7 +15,7 @@ class CSVLogger:
         for field in fieldnames:
             value = getattr(position, field)
             if isinstance(value, float):
-                row.append(f"{value:.2f}")
+                row.append(f"{value:.4f}")
             else:
                 row.append(value)
 

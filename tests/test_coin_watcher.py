@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from strategy_watcher import CoinWatcher
+from coin_watcher import CoinWatcher
 from models import Signal, Position
 from datetime import datetime, timedelta
 import time
@@ -62,6 +62,14 @@ class TestCoinWatcher(unittest.TestCase):
         result = self.watcher.watch()
         self.notifier.send_message.assert_not_called()
         self.assertIsNone(result)
+
+    def test_send_alert_does_not_throw_if_notifier_is_none(self):
+        watcher = CoinWatcher(symbol="BTCUSDT", interval="15m", api=None, strategy=None, notifier=None)
+        signal = Signal(entry=100.0, sl=90.0, tp=110.0, type="Long")
+        try:
+            watcher.send_alert(signal)
+        except Exception as e:
+            self.fail(f"send_alert raised an exception when notifier was None: {e}")
 
     def test_watch_returns_position_on_signal(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=True)

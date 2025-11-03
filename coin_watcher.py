@@ -90,10 +90,12 @@ class CoinWatcher:
         return now_dt >= next_candle_dt
 
     def send_alert(self, signal: Signal):
+        if self.notifier is None:
+            return
         emoji = "🟢" if signal.type == "Long" else "🔴"
         message = (
             f"{emoji} *{signal.type}* | *{self.symbol}* | *{self.interval}*\n"
-            f"*Entry:* `{signal.entry:.2f}`\n"
-            f"*Stop Loss:* `{signal.sl:.2f}`"
+            f"*Entry:* `{signal.entry:.4f}`\n"
+            f"*Stop Loss:* `{signal.sl:.4f}`"
         )
         self.notifier.send_message(message, parse_mode="Markdown")
