@@ -73,10 +73,14 @@ class VirtualExchange:
         self._notify_close(pos)
 
     def _notify_open(self, pos):
+        nclosed = len(self.closed_positions)
+        nopen_ = len(self.open_positions)
+        winrate = round((self.tp_hits / nclosed) * 100, 1) if nclosed > 0 else 0.0
         emoji = "🕒"
         message = (
             f"{emoji} *Opened #{pos.id}* | *{pos.symbol} {pos.type}* | *{pos.interval}*\n"
-            f"*Entry:* `{pos.entry:.4f}` | *SL:* `{pos.sl:.4f}` | *TP:* `{pos.tp:.4f}`"
+            f"*Entry:* `{pos.entry:.4f}` | *SL:* `{pos.sl:.4f}` | *TP:* `{pos.tp:.4f}`\n\n"
+            f"📊 *Closed:* {nclosed} | *Open:* {nopen_} | *TP:* {self.tp_hits} | *SL:* {self.sl_hits} | *Winrate:* {winrate:.1f}%"
         )
         try:
             if self.notifier:
@@ -88,15 +92,15 @@ class VirtualExchange:
         if self.notifier is None:
             return
         emoji = "✅" if pos.exit_reason == "TP Hit" else "🛑"
-        total = len(self.closed_positions)
-        open_ = len(self.open_positions)-1
-        winrate = round((self.tp_hits / total) * 100, 1) if total > 0 else 0.0
+        nclosed = len(self.closed_positions)
+        nopen_ = len(self.open_positions)-1
+        winrate = round((self.tp_hits / nclosed) * 100, 1) if nclosed > 0 else 0.0
 
         message = (
             f"{emoji} *Closed #{pos.id}* | *{pos.exit_reason}*\n"
             f"*{pos.symbol} {pos.interval}* | `{pos.entry:.4f}` → `{pos.exit_price:.4f}`\n"
             f"*RR:* `{pos.rr_ratio}` | *Dur:* `{pos.duration}s`\n\n"
-            f"📊 *Closed:* {total} | *Open:* {open_} | *TP:* {self.tp_hits} | *SL:* {self.sl_hits} | *Winrate:* {winrate:.1f}%"
+            f"📊 *Closed:* {nclosed} | *Open:* {nopen_} | *TP:* {self.tp_hits} | *SL:* {self.sl_hits} | *Winrate:* {winrate:.1f}%"
         )
         try:
             if self.notifier:
