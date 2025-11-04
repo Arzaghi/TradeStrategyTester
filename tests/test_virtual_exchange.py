@@ -147,55 +147,133 @@ class TestVirtualExchange(unittest.TestCase):
 
         mock_print.assert_called_with("[VirtualExchange] Failed to send close notification: Telegram error")
 
-    def test_open_notification_format(self):
-        pos = create_position()
-        self.exchange.open_position(pos)
+    def test_notify_open_multiline(self):
+        exchange = VirtualExchange(api=None, notifier=MagicMock(), logger=None)
+        exchange.tp_hits = 3
+        exchange.sl_hits = 2
+        exchange.closed_positions = [1, 2, 3, 4, 5]
+        exchange.open_positions = [10, 11]
 
-        self.notifier.send_message.assert_called_once()
-        message = self.notifier.send_message.call_args[0][0]
+        pos = Position(
+            symbol="BTCUSDT",
+            interval="1h",
+            candle_time=0,
+            open_time="2025-11-04 01:00:00",
+            entry=43200.1234,
+            sl=43000.0000,
+            tp=44000.0000,
+            status="open",
+            type="LONG",
+            start_timestamp=0.0
+        )
+        pos.id = 5
+        exchange._notify_open(pos)
 
-        self.assertIn("🕒", message)
-        self.assertIn(f"Opened #{pos.id}", message)
-        self.assertIn(pos.symbol, message)
-        self.assertIn(pos.interval, message)
-        self.assertIn(f"{pos.entry:.4f}", message)
-        self.assertIn(f"{pos.sl:.4f}", message)
-        self.assertIn(f"{pos.tp:.4f}", message)
+        expected = (
+            "⏳ *Position Opened #5*\n"
+            "Type: *LONG*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *1h*\n"
+            "Entry: `43200.1234`\n"
+            "Stop Loss: `43000.0000`\n"
+            "Take Profit: `44000.0000`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `5`\n"
+            "Open: `2`\n"
+            "TP Hits: `3`\n"
+            "SL Hits: `2`\n"
+            "Winrate: `60.0%`"
+        )
 
-    def test_close_notification_tp_hit_stats(self):
-        pos = create_position()
-        self.api.get_current_price.return_value = 110.0
-        self.exchange.open_position(pos)
-        self.exchange.tick()
+        exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
 
-        message = self.notifier.send_message.call_args_list[-1][0][0]
+    def test_notify_close_tp_multiline(self):
+        exchange = VirtualExchange(api=None, notifier=MagicMock(), logger=None)
+        exchange.tp_hits = 3
+        exchange.sl_hits = 2
+        exchange.closed_positions = [1, 2, 3, 4, 5]
+        exchange.open_positions = [10, 11]
 
-        self.assertIn("✅", message)
-        self.assertIn("TP Hit", message)
-        self.assertIn(f"Closed #{pos.id}", message)
-        self.assertIn(f"{pos.entry:.4f}", message)
-        self.assertIn(f"{pos.exit_price:.4f}", message)
-        self.assertIn("📊", message)
-        self.assertIn("*Closed:* 1", message)
-        self.assertIn("*Open:* 0", message)
-        self.assertIn("*TP:* 1", message)
-        self.assertIn("*SL:* 0", message)
-        self.assertIn("*Winrate:* 100.0%", message)
+        pos = Position(
+            symbol="ETHUSDT",
+            interval="4h",
+            candle_time=0,
+            open_time="2025-11-04 00:00:00",
+            entry=3200.0000,
+            sl=3150.0000,
+            tp=3300.0000,
+            status="closed",
+            type="SHORT",
+            start_timestamp=0.0,
+            close_time="2025-11-04 04:00:00",
+            duration=3661,
+            exit_price=3100.0000,
+            exit_reason="TP Hit",
+            rr_ratio=2.0
+        )
+        pos.id = 1
+        exchange._notify_close(pos)
 
-    def test_close_notification_sl_hit_stats(self):
-        pos = create_position()
-        self.api.get_current_price.return_value = 89.0
-        self.exchange.open_position(pos)
-        self.exchange.tick()
+        expected = (
+            "✅ *Position Closed #1 — TP Hit*\n"
+            "Type: *SHORT*\n"
+            "Symbol: *ETHUSDT*\n"
+            "Timeframe: *4h*\n"
+            "Entry → Exit: `3200.0000` → `3100.0000`\n"
+            "Duration: `01:01:01`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `5`\n"
+            "Open: `1`\n"
+            "TP Hits: `3`\n"
+            "SL Hits: `2`\n"
+            "Winrate: `60.0%`"
+        )
 
-        message = self.notifier.send_message.call_args_list[-1][0][0]
+        exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
 
-        self.assertIn("🛑", message)
-        self.assertIn("SL Hit", message)
-        self.assertIn("*Closed:* 1", message)
-        self.assertIn("*TP:* 0", message)
-        self.assertIn("*SL:* 1", message)
-        self.assertIn("*Winrate:* 0.0%", message)
+    def test_notify_close_sl_multiline(self):
+        exchange = VirtualExchange(api=None, notifier=MagicMock(), logger=None)
+        exchange.tp_hits = 3
+        exchange.sl_hits = 2
+        exchange.closed_positions = [1, 2, 3, 4, 5]
+        exchange.open_positions = [10, 11]
+
+        pos = Position(
+            symbol="SOLUSDT",
+            interval="15m",
+            candle_time=0,
+            open_time="2025-11-04 00:45:00",
+            entry=55.0000,
+            sl=54.0000,
+            tp=58.0000,
+            status="closed",
+            type="LONG",
+            start_timestamp=0.0,
+            close_time="2025-11-04 01:00:00",
+            duration=900,
+            exit_price=53.0000,
+            exit_reason="SL Hit",
+            rr_ratio=1.0
+        )
+        pos.id = 0
+        exchange._notify_close(pos)
+
+        expected = (
+            "🛑 *Position Closed #0 — SL Hit*\n"
+            "Type: *LONG*\n"
+            "Symbol: *SOLUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `55.0000` → `53.0000`\n"
+            "Duration: `00:15:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `5`\n"
+            "Open: `1`\n"
+            "TP Hits: `3`\n"
+            "SL Hits: `2`\n"
+            "Winrate: `60.0%`"
+        )
+
+        exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
 
     def test_multiple_positions_winrate_calculation(self):
         # TP Hit
@@ -216,9 +294,18 @@ class TestVirtualExchange(unittest.TestCase):
         self.exchange.open_position(pos3)
         self.exchange.tick()
 
-        message = self.notifier.send_message.call_args_list[-1][0][0]
 
-        self.assertIn("*Closed:* 3", message)
-        self.assertIn("*TP:* 2", message)
-        self.assertIn("*SL:* 1", message)
-        self.assertIn("*Winrate:* 66.7%", message)
+        expected = ("✅ *Position Closed #3 — TP Hit*\n"
+                    "Type: *Long*\n"
+                    "Symbol: *BTCUSDT*\n"
+                    "Timeframe: *15m*\n"
+                    "Entry → Exit: `100.0000` → `110.0000`\n"
+                    "Duration: `00:00:00`\n\n\n"
+                    "📊 *Stats*\n"
+                    "Closed: `3`\n"
+                    "Open: `0`\n"
+                    "TP Hits: `2`\n"
+                    "SL Hits: `1`\n"
+                    "Winrate: `66.7%`")
+        
+        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")

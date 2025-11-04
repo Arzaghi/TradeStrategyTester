@@ -1,3 +1,4 @@
+from datetime import timedelta
 import time
 
 import time
@@ -76,11 +77,20 @@ class VirtualExchange:
         nclosed = len(self.closed_positions)
         nopen_ = len(self.open_positions)
         winrate = round((self.tp_hits / nclosed) * 100, 1) if nclosed > 0 else 0.0
-        emoji = "🕒"
         message = (
-            f"{emoji} *Opened #{pos.id}* | *{pos.symbol} {pos.type}* | *{pos.interval}*\n"
-            f"*Entry:* `{pos.entry:.4f}` | *SL:* `{pos.sl:.4f}` | *TP:* `{pos.tp:.4f}`\n\n"
-            f"📊 *Closed:* {nclosed} | *Open:* {nopen_} | *TP:* {self.tp_hits} | *SL:* {self.sl_hits} | *Winrate:* {winrate:.1f}%"
+            f"⏳ *Position Opened #{pos.id}*\n"
+            f"Type: *{pos.type}*\n"
+            f"Symbol: *{pos.symbol}*\n"
+            f"Timeframe: *{pos.interval}*\n"
+            f"Entry: `{pos.entry:.4f}`\n"
+            f"Stop Loss: `{pos.sl:.4f}`\n"
+            f"Take Profit: `{pos.tp:.4f}`\n\n\n"
+            f"📊 *Stats*\n"
+            f"Closed: `{nclosed}`\n"
+            f"Open: `{nopen_}`\n"
+            f"TP Hits: `{self.tp_hits}`\n"
+            f"SL Hits: `{self.sl_hits}`\n"
+            f"Winrate: `{winrate:.1f}%`"
         )
         try:
             if self.notifier:
@@ -91,16 +101,26 @@ class VirtualExchange:
     def _notify_close(self, pos):
         if self.notifier is None:
             return
-        emoji = "✅" if pos.exit_reason == "TP Hit" else "🛑"
         nclosed = len(self.closed_positions)
-        nopen_ = len(self.open_positions)-1
+        nopen_ = len(self.open_positions) - 1
         winrate = round((self.tp_hits / nclosed) * 100, 1) if nclosed > 0 else 0.0
+        duration_str = str(timedelta(seconds=pos.duration))
+        h, m, s = map(int, duration_str.split(":"))
 
+        emoji = "✅" if pos.exit_reason == "TP Hit" else "🛑"
         message = (
-            f"{emoji} *Closed #{pos.id}* | *{pos.exit_reason}*\n"
-            f"*{pos.symbol} {pos.interval}* | `{pos.entry:.4f}` → `{pos.exit_price:.4f}`\n"
-            f"*RR:* `{pos.rr_ratio}` | *Dur:* `{pos.duration}s`\n\n"
-            f"📊 *Closed:* {nclosed} | *Open:* {nopen_} | *TP:* {self.tp_hits} | *SL:* {self.sl_hits} | *Winrate:* {winrate:.1f}%"
+            f"{emoji} *Position Closed #{pos.id} — {pos.exit_reason}*\n"
+            f"Type: *{pos.type}*\n"
+            f"Symbol: *{pos.symbol}*\n"
+            f"Timeframe: *{pos.interval}*\n"
+            f"Entry → Exit: `{pos.entry:.4f}` → `{pos.exit_price:.4f}`\n"
+            f"Duration: `{h:02}:{m:02}:{s:02}`\n\n\n"
+            f"📊 *Stats*\n"
+            f"Closed: `{nclosed}`\n"
+            f"Open: `{nopen_}`\n"
+            f"TP Hits: `{self.tp_hits}`\n"
+            f"SL Hits: `{self.sl_hits}`\n"
+            f"Winrate: `{winrate:.1f}%`"
         )
         try:
             if self.notifier:

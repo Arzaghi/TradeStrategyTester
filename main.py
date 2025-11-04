@@ -1,39 +1,48 @@
 import time
 import os
+import logging
 from api import BinanceAPI
-from strategy import *
+from strategy import StrategyHammerCandles
 from persistence import CSVLogger
-from utils import get_git_commit_hash, OutputBuffer
+from utils import get_git_commit_hash
 from telegram_notifier import TelegramNotifier
 from coin_watcher import CoinWatcher
-from strategy import StrategyHammerCandles
 from virtual_exchange import VirtualExchange
 
-CURRENT_VERSION_HASH = get_git_commit_hash()
-symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT"]
-intervals = ["5m", "15m", "30m", "1h", "4h", "1d", "1w"]
+def main():
+    logging.basicConfig(level=logging.INFO)
 
-outputBuffer = OutputBuffer()
-telegram = TelegramNotifier(os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHANNEL_ID")) # Read from Github Secrets
-api = BinanceAPI()
-logger = CSVLogger()
-strategy = StrategyHammerCandles()
-watchers = [CoinWatcher(symbol, interval, api, strategy, None) for symbol in symbols for interval in intervals]
-exchange = VirtualExchange(api, telegram, logger)
+    current_version = get_git_commit_hash()
+    symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "XRPUSDT", "TRXUSDT", "DOGEUSDT", "LINKUSDT", "SUIUSDT"]
+    intervals = ["15m", "30m", "1h", "4h", "1d", "1w"]
 
-Message= ""
-Message += f"Started Version On Server: {CURRENT_VERSION_HASH}\n"
-Message += "Number of Watchers: " + str(len(watchers)) + "\n"
-Message += "Watching Coins: " + str(symbols) + "\n"
-Message += "Watching TimeFrames: " + str(intervals) + "\n"
-print(Message)
-telegram.send_message(Message)
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
+    telegram = TelegramNotifier(bot_token, channel_id)
+    api = BinanceAPI()
+    logger = CSVLogger()
+    strategy = StrategyHammerCandles()
+    watchers = [CoinWatcher(symbol, interval, api, strategy, None) for symbol in symbols for interval in intervals]
+    exchange = VirtualExchange(api, telegram, logger)
 
+    message = (
+        f"Started Version On Server: {current_version}\n"
+        f"Number of Watchers: {len(watchers)}\n"
+        f"Watching Coins: {symbols}\n"
+        f"Watching TimeFrames: {intervals}\n"
+    )
+    logging.info(message)
+    telegram.send_message(message)
 
-while True:
-    for watcher in watchers:
-        position = watcher.watch()
-        exchange.open_position(position)
+    try:
+        while True:
+            for watcher in watchers:
+                position = watcher.watch()
+                exchange.open_position(position)
+            exchange.tick()
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logging.info("Shutting down gracefully...")
 
-    exchange.tick()
-    time.sleep(1)
+if __name__ == "__main__":
+    main()
