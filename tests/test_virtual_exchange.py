@@ -26,6 +26,32 @@ class TestVirtualExchange(unittest.TestCase):
         self.logger = MagicMock()
         self.exchange = VirtualExchange(self.api, self.notifier, self.logger)
 
+    def test_tp_extension_long_position(self):
+        pos = create_position(entry=100.0, sl=90.0, tp=110.0, type="Long")
+        self.api.get_current_price.side_effect = [110.0, 120.0, 130.0, 95.0]  # 3 TP hits, then SL
+        self.exchange.open_position(pos)
+
+        for _ in range(4):
+            self.exchange.tick()
+
+        self.assertEqual(pos.profit, 2)
+        self.assertEqual(self.exchange.tp_hits, 2)
+        self.assertEqual(self.exchange.profits_sum, 2)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+
+    def test_tp_extension_short_position(self):
+        pos = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
+        self.api.get_current_price.side_effect = [90.0, 80.0, 70.0, 111.0]  # 3 TP hits, then SL
+        self.exchange.open_position(pos)
+
+        for _ in range(4):
+            self.exchange.tick()
+
+        self.assertEqual(pos.profit, 2)
+        self.assertEqual(self.exchange.tp_hits, 2)
+        self.assertEqual(self.exchange.profits_sum, 2)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+
     def test_open_position_assigns_id_and_notifies(self):
         pos = create_position()
         self.exchange.open_position(pos)
@@ -39,64 +65,405 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(len(self.exchange.open_positions), 0)
         self.notifier.send_message.assert_not_called()
 
-    def test_tick_closes_on_tp_hit(self):
-        pos = create_position()
+    def test_long_tp2_hit(self):
+        pos = create_position() # entry=100.0, sl=90.0, tp=110.0, type="Long"):
         self.api.get_current_price.return_value = 110.0
         self.exchange.open_position(pos)
-
-        self.exchange.tick()
-
-        self.assertEqual(len(self.exchange.open_positions), 0)
-        self.assertEqual(len(self.exchange.closed_positions), 1)
-        self.assertEqual(self.exchange.tp_hits, 1)
-        self.assertEqual(self.exchange.sl_hits, 0)
-        self.logger.write.assert_called_once()
         self.notifier.send_message.assert_called()
 
-    def test_tick_closes_on_sl_hit(self):
-        pos = create_position()
-        self.api.get_current_price.return_value = 89.0
-        self.exchange.open_position(pos)
+        expected = (
+            "⏳ *Position Opened #1*\n"
+            "Type: *Long*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry: `100.0000`\n"
+            "Stop Loss: `90.0000`\n"
+            "Take Profit: `110.0000`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `0`\n"
+            "Open: `1`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `0`\n"
+        )
 
-        self.exchange.tick()
+        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
 
-        self.assertEqual(len(self.exchange.open_positions), 0)
-        self.assertEqual(len(self.exchange.closed_positions), 1)
-        self.assertEqual(self.exchange.tp_hits, 0)
-        self.assertEqual(self.exchange.sl_hits, 1)
-        self.logger.write.assert_called_once()
-        self.notifier.send_message.assert_called()
+        self.assertEqual(pos.profit, -1)
 
-    def test_tick_keeps_position_open_if_price_between_sl_tp(self):
-        pos = create_position()
-        self.api.get_current_price.return_value = 100.0
-        self.exchange.open_position(pos)
+        self.exchange.tick() # First TP hit
 
-        self.exchange.tick()
-
+        # Position should still be open
         self.assertEqual(len(self.exchange.open_positions), 1)
         self.assertEqual(len(self.exchange.closed_positions), 0)
-        self.logger.write.assert_not_called()
 
-    def test_tick_handles_short_tp_hit(self):
-        pos = create_position(type="Short", entry=100.0, sl=110.0, tp=90.0)
-        self.api.get_current_price.return_value = 90.0
+        # Profit should be updated to 0
+        self.assertEqual(pos.profit, 0)
+        self.assertEqual(pos.sl, 100)
+        self.assertEqual(pos.tp, 120)
+
+        # No TP or SL hits yet
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 0)
+
+        self.api.get_current_price.return_value = 101.0
+        self.exchange.tick() # Nothing Changed
+        self.assertEqual(len(self.exchange.open_positions), 1)
+        self.assertEqual(len(self.exchange.closed_positions), 0)
+        self.assertEqual(pos.profit, 0)
+        self.assertEqual(pos.sl, 100)
+        self.assertEqual(pos.tp, 120)
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 0)
+
+        self.api.get_current_price.return_value = 121.0
+        self.exchange.tick() # new TP hit
+        self.assertEqual(len(self.exchange.open_positions), 1)
+        self.assertEqual(len(self.exchange.closed_positions), 0)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 110)
+        self.assertEqual(pos.tp, 130)
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 0)
+
+        self.api.get_current_price.return_value = 131.0
+        self.exchange.tick() # new TP hit
+        self.assertEqual(len(self.exchange.open_positions), 1)
+        self.assertEqual(len(self.exchange.closed_positions), 0)
+        self.assertEqual(pos.profit, 2)
+        self.assertEqual(pos.sl, 120)
+        self.assertEqual(pos.tp, 140)
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 0)
+
+        self.api.get_current_price.return_value = 120.0
+        self.exchange.tick() # stop loss
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.assertEqual(pos.profit, 2)
+        self.assertEqual(pos.sl, 120)
+        self.assertEqual(pos.tp, 140)
+        self.assertEqual(self.exchange.tp_hits, 2)
+        self.assertEqual(self.exchange.sl_hits, 0)
+
+        expected = (
+            "✅ *Position Closed #1 — SL Hit*\n"
+            "Type: *Long*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `100.0000` → `120.0000`\n"
+            "Profit: *2*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `1`\n"
+            "Open: `0`\n"
+            "TP Hits: `2`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `2`\n"
+        )
+
+        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+
+    def test_long_sl_on_entry_hit(self):
+        pos = create_position() # entry=100.0, sl=90.0, tp=110.0, type="Long"):        
         self.exchange.open_position(pos)
+        self.notifier.send_message.assert_called()
 
+        expected = (
+            "⏳ *Position Opened #1*\n"
+            "Type: *Long*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry: `100.0000`\n"
+            "Stop Loss: `90.0000`\n"
+            "Take Profit: `110.0000`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `0`\n"
+            "Open: `1`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `0`\n"
+        )
+
+        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+
+        self.assertEqual(pos.profit, -1)
+
+        self.api.get_current_price.return_value = 110.0
+        self.exchange.tick() # First TP hit
+
+        # Position should still be open
+        self.assertEqual(len(self.exchange.open_positions), 1)
+        self.assertEqual(len(self.exchange.closed_positions), 0)
+
+        # Profit should be updated to 0
+        self.assertEqual(pos.profit, 0)
+        self.assertEqual(pos.sl, 100)
+        self.assertEqual(pos.tp, 120)
+
+        # No TP or SL hits yet
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 0)
+
+        self.api.get_current_price.return_value = 99
+        self.exchange.tick() # Stop hit on Entry
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.assertEqual(pos.profit, 0)
+        self.assertEqual(pos.sl, 100)
+        self.assertEqual(pos.tp, 120)
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 0)
+        self.assertEqual(self.exchange.breakeven_hits, 1)
+
+        expected = (
+            "😐 *Position Closed #1 — SL Hit*\n"
+            "Type: *Long*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `100.0000` → `99.0000`\n"
+            "Profit: *0*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `1`\n"
+            "Open: `0`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `1`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `0`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+
+    def test_long_sl_without_tp_hit(self):
+        pos = create_position(entry=100.0, sl=90.0, tp=110.0, type="Long")
+        self.exchange.open_position(pos)
+        self.notifier.send_message.assert_called()
+
+        expected_open = (
+            "⏳ *Position Opened #1*\n"
+            "Type: *Long*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry: `100.0000`\n"
+            "Stop Loss: `90.0000`\n"
+            "Take Profit: `110.0000`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `0`\n"
+            "Open: `1`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `0`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_open, parse_mode="Markdown")
+        self.assertEqual(pos.profit, -1)
+
+        # Price drops below SL immediately
+        self.api.get_current_price.return_value = 89.0
         self.exchange.tick()
 
-        self.assertEqual(self.exchange.tp_hits, 1)
-        self.assertEqual(pos.exit_reason, "TP Hit")
-
-    def test_tick_handles_short_sl_hit(self):
-        pos = create_position(type="Short", entry=100.0, sl=110.0, tp=90.0)
-        self.api.get_current_price.return_value = 111.0
-        self.exchange.open_position(pos)
-
-        self.exchange.tick()
-
-        self.assertEqual(self.exchange.sl_hits, 1)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
         self.assertEqual(pos.exit_reason, "SL Hit")
+        self.assertEqual(pos.exit_price, 89.0)
+        self.assertEqual(pos.profit, -1)
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 1)
+        self.assertEqual(self.exchange.breakeven_hits, 0)
+        self.assertEqual(self.exchange.profits_sum, -1)
+
+        expected_close = (
+            "⛔ *Position Closed #1 — SL Hit*\n"
+            "Type: *Long*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `100.0000` → `89.0000`\n"
+            "Profit: *-1*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `1`\n"
+            "Open: `0`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `1`\n"
+            "Total Profit: `-1`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+
+    def test_short_tp2_hit(self):
+        pos = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
+        self.exchange.open_position(pos)
+        self.notifier.send_message.assert_called()
+
+        expected_open = (
+            "⏳ *Position Opened #1*\n"
+            "Type: *Short*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry: `100.0000`\n"
+            "Stop Loss: `110.0000`\n"
+            "Take Profit: `90.0000`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `0`\n"
+            "Open: `1`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `0`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_open, parse_mode="Markdown")
+        self.assertEqual(pos.profit, -1)
+
+        self.api.get_current_price.return_value = 90.0
+        self.exchange.tick()  # First TP hit
+        self.assertEqual(pos.profit, 0)
+        self.assertEqual(pos.sl, 100)
+        self.assertEqual(pos.tp, 80)
+
+        self.api.get_current_price.return_value = 79.0
+        self.exchange.tick()  # Second TP hit
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 90)
+        self.assertEqual(pos.tp, 70)
+
+        self.api.get_current_price.return_value = 69.0
+        self.exchange.tick()  # Third TP hit
+        self.assertEqual(pos.profit, 2)
+        self.assertEqual(pos.sl, 80)
+        self.assertEqual(pos.tp, 60)
+
+        self.api.get_current_price.return_value = 80.0
+        self.exchange.tick()  # SL hit
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.assertEqual(self.exchange.tp_hits, 2)
+        self.assertEqual(self.exchange.sl_hits, 0)
+
+        expected_close = (
+            "✅ *Position Closed #1 — SL Hit*\n"
+            "Type: *Short*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `100.0000` → `80.0000`\n"
+            "Profit: *2*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `1`\n"
+            "Open: `0`\n"
+            "TP Hits: `2`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `2`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+
+    def test_short_sl_on_entry_hit(self):
+        pos = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
+        self.exchange.open_position(pos)
+        self.notifier.send_message.assert_called()
+
+        expected_open = (
+            "⏳ *Position Opened #1*\n"
+            "Type: *Short*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry: `100.0000`\n"
+            "Stop Loss: `110.0000`\n"
+            "Take Profit: `90.0000`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `0`\n"
+            "Open: `1`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `0`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_open, parse_mode="Markdown")
+        self.assertEqual(pos.profit, -1)
+
+        self.api.get_current_price.return_value = 90.0
+        self.exchange.tick()  # First TP hit
+        self.assertEqual(pos.profit, 0)
+        self.assertEqual(pos.sl, 100)
+        self.assertEqual(pos.tp, 80)
+
+        self.api.get_current_price.return_value = 101.0
+        self.exchange.tick()  # SL hit at entry
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.assertEqual(pos.profit, 0)
+        self.assertEqual(self.exchange.breakeven_hits, 1)
+
+        expected_close = (
+            "😐 *Position Closed #1 — SL Hit*\n"
+            "Type: *Short*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `100.0000` → `101.0000`\n"
+            "Profit: *0*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `1`\n"
+            "Open: `0`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `1`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `0`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+
+    def test_sl_without_tp_hit_short(self):
+        pos = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
+        self.exchange.open_position(pos)
+        self.notifier.send_message.assert_called()
+
+        expected_open = (
+            "⏳ *Position Opened #1*\n"
+            "Type: *Short*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry: `100.0000`\n"
+            "Stop Loss: `110.0000`\n"
+            "Take Profit: `90.0000`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `0`\n"
+            "Open: `1`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `0`\n"
+            "Total Profit: `0`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_open, parse_mode="Markdown")
+        self.assertEqual(pos.profit, -1)
+
+        self.api.get_current_price.return_value = 111.0
+        self.exchange.tick()  # SL hit immediately
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.assertEqual(pos.profit, -1)
+        self.assertEqual(self.exchange.sl_hits, 1)
+        self.assertEqual(self.exchange.profits_sum, -1)
+
+        expected_close = (
+            "⛔ *Position Closed #1 — SL Hit*\n"
+            "Type: *Short*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `100.0000` → `111.0000`\n"
+            "Profit: *-1*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `1`\n"
+            "Open: `0`\n"
+            "TP Hits: `0`\n"
+            "En Hits: `0`\n"
+            "SL Hits: `1`\n"
+            "Total Profit: `-1`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
 
     def test_tick_handles_api_exception_gracefully(self):
         pos = create_position()
@@ -109,203 +476,239 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(len(self.exchange.closed_positions), 0)
 
     def test_notify_open_skips_if_notifier_none(self):
-        exchange = VirtualExchange(self.api, None)
+        exchange = VirtualExchange(self.api, notifier = None)
         pos = create_position()
-        exchange.open_position(pos)  # Should not throw
+        exchange._notify_open(pos)  # Should not throw
 
     def test_notify_close_skips_if_notifier_none(self):
-        exchange = VirtualExchange(self.api, None)
+        exchange = VirtualExchange(self.api, notifier = None)
         pos = create_position()
-        exchange._close_position(pos, 110.0, "TP Hit")  # Should not throw
+        exchange._notify_close(pos)  # Should not throw
 
     def test_logger_failure_does_not_crash(self):
         pos = create_position()
-        self.api.get_current_price.return_value = 110.0
-        self.logger.write.side_effect = Exception("Disk error")
+        
         self.exchange.open_position(pos)
 
-        self.exchange.tick()
-
-        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.api.get_current_price.return_value = 89.0
+        self.logger.write.side_effect = Exception("Disk error")
+        self.exchange.tick() # close position and log
 
     @patch("builtins.print")
     def test_notify_open_prints_on_failure(self, mock_print):
         pos = create_position()
         self.notifier.send_message.side_effect = Exception("Telegram error")
         self.exchange.open_position(pos)
-
         mock_print.assert_called_with("[VirtualExchange] Failed to send open notification: Telegram error")
 
     @patch("builtins.print")
     def test_notify_close_prints_on_failure(self, mock_print):
-        pos = create_position()
-        self.api.get_current_price.return_value = 110.0
-        self.notifier.send_message.side_effect = Exception("Telegram error")
+        pos = create_position()                
         self.exchange.open_position(pos)
 
-        self.exchange.tick()
-
+        self.api.get_current_price.return_value = 89.0
+        self.notifier.send_message.side_effect = Exception("Telegram error")
+        self.exchange.tick() # close position and send notification but error in sending
         mock_print.assert_called_with("[VirtualExchange] Failed to send close notification: Telegram error")
 
-    def test_notify_open_multiline(self):
-        exchange = VirtualExchange(api=None, notifier=MagicMock(), logger=None)
-        exchange.tp_hits = 3
-        exchange.sl_hits = 2
-        exchange.closed_positions = [1, 2, 3, 4, 5]
-        exchange.open_positions = [10, 11]
-
-        pos = Position(
-            symbol="BTCUSDT",
-            interval="1h",
-            candle_time=0,
-            open_time="2025-11-04 01:00:00",
-            entry=43200.1234,
-            sl=43000.0000,
-            tp=44000.0000,
-            status="open",
-            type="LONG",
-            start_timestamp=0.0
-        )
-        pos.id = 5
-        exchange._notify_open(pos)
-
-        expected = (
-            "⏳ *Position Opened #5*\n"
-            "Type: *LONG*\n"
-            "Symbol: *BTCUSDT*\n"
-            "Timeframe: *1h*\n"
-            "Entry: `43200.1234`\n"
-            "Stop Loss: `43000.0000`\n"
-            "Take Profit: `44000.0000`\n\n\n"
-            "📊 *Stats*\n"
-            "Closed: `5`\n"
-            "Open: `2`\n"
-            "TP Hits: `3`\n"
-            "SL Hits: `2`\n"
-            "Winrate: `60.0%`"
-        )
-
-        exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
-
-    def test_notify_close_tp_multiline(self):
-        exchange = VirtualExchange(api=None, notifier=MagicMock(), logger=None)
-        exchange.tp_hits = 3
-        exchange.sl_hits = 2
-        exchange.closed_positions = [1, 2, 3, 4, 5]
-        exchange.open_positions = [10, 11]
-
-        pos = Position(
-            symbol="ETHUSDT",
-            interval="4h",
-            candle_time=0,
-            open_time="2025-11-04 00:00:00",
-            entry=3200.0000,
-            sl=3150.0000,
-            tp=3300.0000,
-            status="closed",
-            type="SHORT",
-            start_timestamp=0.0,
-            close_time="2025-11-04 04:00:00",
-            duration=3661,
-            exit_price=3100.0000,
-            exit_reason="TP Hit",
-            rr_ratio=2.0
-        )
-        pos.id = 1
-        exchange._notify_close(pos)
-
-        expected = (
-            "✅ *Position Closed #1 — TP Hit*\n"
-            "Type: *SHORT*\n"
-            "Symbol: *ETHUSDT*\n"
-            "Timeframe: *4h*\n"
-            "Entry → Exit: `3200.0000` → `3100.0000`\n"
-            "Duration: `01:01:01`\n\n\n"
-            "📊 *Stats*\n"
-            "Closed: `5`\n"
-            "Open: `1`\n"
-            "TP Hits: `3`\n"
-            "SL Hits: `2`\n"
-            "Winrate: `60.0%`"
-        )
-
-        exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
-
-    def test_notify_close_sl_multiline(self):
-        exchange = VirtualExchange(api=None, notifier=MagicMock(), logger=None)
-        exchange.tp_hits = 3
-        exchange.sl_hits = 2
-        exchange.closed_positions = [1, 2, 3, 4, 5]
-        exchange.open_positions = [10, 11]
-
-        pos = Position(
-            symbol="SOLUSDT",
-            interval="15m",
-            candle_time=0,
-            open_time="2025-11-04 00:45:00",
-            entry=55.0000,
-            sl=54.0000,
-            tp=58.0000,
-            status="closed",
-            type="LONG",
-            start_timestamp=0.0,
-            close_time="2025-11-04 01:00:00",
-            duration=900,
-            exit_price=53.0000,
-            exit_reason="SL Hit",
-            rr_ratio=1.0
-        )
-        pos.id = 0
-        exchange._notify_close(pos)
-
-        expected = (
-            "🛑 *Position Closed #0 — SL Hit*\n"
-            "Type: *LONG*\n"
-            "Symbol: *SOLUSDT*\n"
-            "Timeframe: *15m*\n"
-            "Entry → Exit: `55.0000` → `53.0000`\n"
-            "Duration: `00:15:00`\n\n\n"
-            "📊 *Stats*\n"
-            "Closed: `5`\n"
-            "Open: `1`\n"
-            "TP Hits: `3`\n"
-            "SL Hits: `2`\n"
-            "Winrate: `60.0%`"
-        )
-
-        exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
-
     def test_multiple_positions_winrate_calculation(self):
-        # TP Hit
-        pos1 = create_position()
-        self.api.get_current_price.return_value = 110.0
+        # TP 2 Hit
+        pos1 = create_position() # long 100, sl=90, tp=110
         self.exchange.open_position(pos1)
+
+        self.api.get_current_price.return_value = 110
+        self.exchange.tick()
+
+        self.api.get_current_price.return_value = 120
+        self.exchange.tick()
+
+        self.api.get_current_price.return_value = 130
+        self.exchange.tick()
+
+        self.api.get_current_price.return_value = 119
         self.exchange.tick()
 
         # SL Hit
-        pos2 = create_position()
-        self.api.get_current_price.return_value = 89.0
+        pos2 = create_position()        
         self.exchange.open_position(pos2)
+        self.api.get_current_price.return_value = 89.0
         self.exchange.tick()
 
-        # TP Hit
-        pos3 = create_position()
-        self.api.get_current_price.return_value = 110.0
+        # entry Hit
+        pos3 = create_position()        
         self.exchange.open_position(pos3)
+        self.api.get_current_price.return_value = 110.0
+        self.exchange.tick()
+        self.api.get_current_price.return_value = 99.0
         self.exchange.tick()
 
-
-        expected = ("✅ *Position Closed #3 — TP Hit*\n"
-                    "Type: *Long*\n"
-                    "Symbol: *BTCUSDT*\n"
-                    "Timeframe: *15m*\n"
-                    "Entry → Exit: `100.0000` → `110.0000`\n"
-                    "Duration: `00:00:00`\n\n\n"
-                    "📊 *Stats*\n"
-                    "Closed: `3`\n"
-                    "Open: `0`\n"
-                    "TP Hits: `2`\n"
-                    "SL Hits: `1`\n"
-                    "Winrate: `66.7%`")
+        self.assertEqual(self.exchange.tp_hits, 2)
+        self.assertEqual(self.exchange.sl_hits, 1)
+        self.assertEqual(self.exchange.breakeven_hits, 1)
+        self.assertEqual(self.exchange.profits_sum, 1)
+        self.assertEqual(len(self.exchange.closed_positions), 3)
         
+        expected = (
+            "😐 *Position Closed #3 — SL Hit*\n"
+            "Type: *Long*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `100.0000` → `99.0000`\n"
+            "Profit: *0*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `3`\n"
+            "Open: `0`\n"
+            "TP Hits: `2`\n"
+            "En Hits: `1`\n"
+            "SL Hits: `1`\n"
+            "Total Profit: `1`\n"
+        )
+
+        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+
+    def test_mixed_long_and_short_positions(self):
+        # Long position: 2 TP hits, then SL
+        long_pos = create_position(entry=100.0, sl=90.0, tp=110.0, type="Long")
+        self.exchange.open_position(long_pos)
+
+        self.api.get_current_price.return_value = 110.0
+        self.exchange.tick()  # TP → profit = 0, sl = 100, tp = 120
+
+        self.api.get_current_price.return_value = 121.0
+        self.exchange.tick()  # TP → profit = 1, sl = 110, tp = 130
+
+        self.api.get_current_price.return_value = 120.0
+        self.exchange.tick()  # SL → profit = 1
+
+        # Short position: 1 TP hit, then SL
+        short_pos = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
+        self.exchange.open_position(short_pos)
+
+        self.api.get_current_price.return_value = 90.0
+        self.exchange.tick()  # TP → profit = 0, sl = 100, tp = 80
+
+        self.api.get_current_price.return_value = 101.0
+        self.exchange.tick()  # SL → profit = 0 (breakeven)
+
+        # Long position: SL hit immediately
+        long_sl = create_position(entry=100.0, sl=90.0, tp=110.0, type="Long")
+        self.exchange.open_position(long_sl)
+
+        self.api.get_current_price.return_value = 89.0
+        self.exchange.tick()  # SL → profit = -1
+
+        # Short position: SL hit immediately
+        short_sl = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
+        self.exchange.open_position(short_sl)
+
+        self.api.get_current_price.return_value = 111.0
+        self.exchange.tick()  # SL → profit = -1
+
+        # Final assertions
+        self.assertEqual(len(self.exchange.closed_positions), 4)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+
+        self.assertEqual(self.exchange.tp_hits, 1)  # long: 1, short: 0 (only full TP counted)
+        self.assertEqual(self.exchange.sl_hits, 2)  # long_sl + short_sl
+        self.assertEqual(self.exchange.breakeven_hits, 1)  # short_pos
+        self.assertEqual(self.exchange.profits_sum, -1)  # 1 + 0 + (-1) + (-1)
+
+        # Final closed position notification (short_sl)
+        expected_close = (
+            "⛔ *Position Closed #4 — SL Hit*\n"
+            "Type: *Short*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `100.0000` → `111.0000`\n"
+            "Profit: *-1*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `4`\n"
+            "Open: `0`\n"
+            "TP Hits: `1`\n"
+            "En Hits: `1`\n"
+            "SL Hits: `2`\n"
+            "Total Profit: `-1`\n"
+        )
+        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+
+    def test_three_open_positions_mixed_directions(self):
+        # Long position: TP hit → SL hit
+        long_pos = create_position(entry=100.0, sl=90.0, tp=110.0, type="Long")
+        # Short position: TP hit → SL hit
+        short_pos = create_position(entry=200.0, sl=210.0, tp=190.0, type="Short")
+        # Long position: SL hit immediately
+        long_sl = create_position(entry=300.0, sl=290.0, tp=310.0, type="Long")
+
+        self.exchange.open_position(long_pos)
+        self.exchange.open_position(short_pos)
+        self.exchange.open_position(long_sl)
+        self.assertEqual(len(self.exchange.open_positions), 3)
+        self.assertEqual(len(self.exchange.closed_positions), 0)
+        self.assertEqual(long_pos.profit, -1)
+        self.assertEqual(short_pos.profit, -1)
+        self.assertEqual(long_sl.profit, -1)        
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 0)
+        self.assertEqual(self.exchange.breakeven_hits, 0)
+        self.assertEqual(self.exchange.profits_sum, 0)
+
+
+        # Tick 1: TP hit for long and short
+        self.api.get_current_price.return_value = 110
+        self.exchange.tick()
+
+        self.assertEqual(len(self.exchange.open_positions), 2)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.assertEqual(long_pos.profit, 0)
+        self.assertEqual(short_pos.profit, 0)
+        self.assertEqual(long_sl.profit, -1)        
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 1)
+        self.assertEqual(self.exchange.breakeven_hits, 0)
+        self.assertEqual(self.exchange.profits_sum, -1)
+
+        # Tick 2: SL hit for long and short
+        self.api.get_current_price.return_value = 100
+        self.exchange.tick()
+
+        self.assertEqual(len(self.exchange.open_positions), 1)
+        self.assertEqual(len(self.exchange.closed_positions), 2)
+        self.assertEqual(long_pos.profit, 0)
+        self.assertEqual(short_pos.profit, 1)
+        self.assertEqual(long_sl.profit, -1)        
+        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.sl_hits, 1)
+        self.assertEqual(self.exchange.breakeven_hits, 1)
+        self.assertEqual(self.exchange.profits_sum, -1)
+
+        self.api.get_current_price.return_value = 190
+        self.exchange.tick()
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 3)
+        self.assertEqual(long_pos.profit, 0)
+        self.assertEqual(short_pos.profit, 1)
+        self.assertEqual(long_sl.profit, -1)        
+        self.assertEqual(self.exchange.tp_hits, 1)
+        self.assertEqual(self.exchange.sl_hits, 1)
+        self.assertEqual(self.exchange.breakeven_hits, 1)
+        self.assertEqual(self.exchange.profits_sum, 0)
+
+        expected = (
+            "✅ *Position Closed #2 — SL Hit*\n"
+            "Type: *Short*\n"
+            "Symbol: *BTCUSDT*\n"
+            "Timeframe: *15m*\n"
+            "Entry → Exit: `200.0000` → `190.0000`\n"
+            "Profit: *1*\n"
+            "Duration: `00:00:00`\n\n\n"
+            "📊 *Stats*\n"
+            "Closed: `3`\n"
+            "Open: `0`\n"
+            "TP Hits: `1`\n"
+            "En Hits: `1`\n"
+            "SL Hits: `1`\n"
+            "Total Profit: `0`\n"
+        )
         self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")

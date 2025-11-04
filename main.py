@@ -13,7 +13,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     current_version = get_git_commit_hash()
-    symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "XRPUSDT", "TRXUSDT", "DOGEUSDT", "LINKUSDT", "SUIUSDT"]
+    symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "XRPUSDT", "TRXUSDT", "DOGEUSDT", "LINKUSDT", "SUIUSDT", "PAXGUSDT"]
     intervals = ["15m", "30m", "1h", "4h", "1d", "1w"]
 
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
