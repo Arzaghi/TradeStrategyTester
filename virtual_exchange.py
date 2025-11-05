@@ -104,7 +104,7 @@ class VirtualExchange:
         nclosed = len(self.closed_positions)
         nopen_ = len(self.open_positions)
         message = (
-            f"⏳ *Position Opened* #Position_{pos.id}\n"
+            f"⏳ *Position Opened* #Position{pos.id}\n"
             f"Type: *{pos.type}*\n"
             f"Symbol: *{pos.symbol}*\n"
             f"Timeframe: *{pos.interval}*\n"
@@ -133,7 +133,7 @@ class VirtualExchange:
 
         emoji = "✅" if pos.profit > 0 else "⛔" if pos.profit < 0 else "😐"
         message = (
-            f"{emoji} *Position Closed* #Position_{pos.id}\n"
+            f"{emoji} *Position Closed* #Position{pos.id}\n"
             f"Type: *{pos.type}*\n"
             f"Symbol: *{pos.symbol}*\n"
             f"Timeframe: *{pos.interval}*\n"
