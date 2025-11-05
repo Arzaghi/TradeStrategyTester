@@ -94,7 +94,7 @@ class VirtualExchange:
         nclosed = len(self.closed_positions)
         nopen_ = len(self.open_positions)
         message = (
-            f"⏳ *Position Opened #{pos.id}*\n"
+            f"⏳ *Position Opened* #Position_{pos.id}\n"
             f"Type: *{pos.type}*\n"
             f"Symbol: *{pos.symbol}*\n"
             f"Timeframe: *{pos.interval}*\n"
@@ -120,17 +120,15 @@ class VirtualExchange:
             return
         nclosed = len(self.closed_positions)
         nopen_ = len(self.open_positions) - 1
-        h, m, s = map(int, pos.duration.split(":"))
-        f"Duration: `{h:02}:{m:02}:{s:02}`\n\n\n"
 
         emoji = "✅" if pos.profit > 0 else "⛔" if pos.profit < 0 else "😐"
         message = (
-            f"{emoji} *Position Closed #{pos.id} — {pos.exit_reason}*\n"
+            f"{emoji} *Position Closed* #Position_{pos.id}\n"
             f"Type: *{pos.type}*\n"
             f"Symbol: *{pos.symbol}*\n"
             f"Timeframe: *{pos.interval}*\n"
-            f"Entry → Exit: `{pos.entry:.4f}` → `{pos.exit_price:.4f}`\n"
             f"Profit: *{pos.profit}*\n"
+            f"`{pos.entry:.4f}` → `{pos.exit_price:.4f}`\n"
             f"Duration: `{pos.duration}`\n\n\n"
             f"📊 *Stats*\n"
             f"Closed: `{nclosed}`\n"

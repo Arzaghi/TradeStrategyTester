@@ -129,7 +129,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.notifier.send_message.assert_called()
 
         expected = (
-            "⏳ *Position Opened #1*\n"
+            "⏳ *Position Opened* #Position_1\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
@@ -205,12 +205,12 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(self.exchange.sl_hits, 0)
 
         expected = (
-            "✅ *Position Closed #1 — SL Hit*\n"
+            "✅ *Position Closed* #Position_1\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Entry → Exit: `100.0000` → `120.0000`\n"
             "Profit: *2*\n"
+            "`100.0000` → `120.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
@@ -229,7 +229,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.notifier.send_message.assert_called()
 
         expected = (
-            "⏳ *Position Opened #1*\n"
+            "⏳ *Position Opened* #Position_1\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
@@ -277,12 +277,12 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(self.exchange.breakeven_hits, 1)
 
         expected = (
-            "😐 *Position Closed #1 — SL Hit*\n"
+            "😐 *Position Closed* #Position_1\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Entry → Exit: `100.0000` → `99.0000`\n"
             "Profit: *0*\n"
+            "`100.0000` → `99.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
@@ -300,7 +300,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.notifier.send_message.assert_called()
 
         expected_open = (
-            "⏳ *Position Opened #1*\n"
+            "⏳ *Position Opened* #Position_1\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
@@ -333,12 +333,12 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(self.exchange.profits_sum, -1)
 
         expected_close = (
-            "⛔ *Position Closed #1 — SL Hit*\n"
+            "⛔ *Position Closed* #Position_1\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Entry → Exit: `100.0000` → `89.0000`\n"
             "Profit: *-1*\n"
+            "`100.0000` → `89.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
@@ -356,7 +356,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.notifier.send_message.assert_called()
 
         expected_open = (
-            "⏳ *Position Opened #1*\n"
+            "⏳ *Position Opened* #Position_1\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
@@ -400,12 +400,12 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(self.exchange.sl_hits, 0)
 
         expected_close = (
-            "✅ *Position Closed #1 — SL Hit*\n"
+            "✅ *Position Closed* #Position_1\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
-            "Timeframe: *15m*\n"
-            "Entry → Exit: `100.0000` → `80.0000`\n"
+            "Timeframe: *15m*\n"            
             "Profit: *2*\n"
+            "`100.0000` → `80.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
@@ -423,7 +423,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.notifier.send_message.assert_called()
 
         expected_open = (
-            "⏳ *Position Opened #1*\n"
+            "⏳ *Position Opened* #Position_1\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
@@ -455,12 +455,12 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(self.exchange.breakeven_hits, 1)
 
         expected_close = (
-            "😐 *Position Closed #1 — SL Hit*\n"
+            "😐 *Position Closed* #Position_1\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Entry → Exit: `100.0000` → `101.0000`\n"
             "Profit: *0*\n"
+            "`100.0000` → `101.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
@@ -478,7 +478,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.notifier.send_message.assert_called()
 
         expected_open = (
-            "⏳ *Position Opened #1*\n"
+            "⏳ *Position Opened* #Position_1\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
@@ -505,12 +505,12 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(self.exchange.profits_sum, -1)
 
         expected_close = (
-            "⛔ *Position Closed #1 — SL Hit*\n"
+            "⛔ *Position Closed* #Position_1\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
-            "Timeframe: *15m*\n"
-            "Entry → Exit: `100.0000` → `111.0000`\n"
+            "Timeframe: *15m*\n"            
             "Profit: *-1*\n"
+            "`100.0000` → `111.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
@@ -613,12 +613,12 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(len(self.exchange.closed_positions), 3)
         
         expected = (
-            "😐 *Position Closed #3 — SL Hit*\n"
+            "😐 *Position Closed* #Position_3\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
-            "Timeframe: *15m*\n"
-            "Entry → Exit: `100.0000` → `99.0000`\n"
+            "Timeframe: *15m*\n"            
             "Profit: *0*\n"
+            "`100.0000` → `99.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `3`\n"
@@ -680,12 +680,12 @@ class TestVirtualExchange(unittest.TestCase):
 
         # Final closed position notification (short_sl)
         expected_close = (
-            "⛔ *Position Closed #4 — SL Hit*\n"
+            "⛔ *Position Closed* #Position_4\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Entry → Exit: `100.0000` → `111.0000`\n"
             "Profit: *-1*\n"
+            "`100.0000` → `111.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `4`\n"
@@ -761,12 +761,12 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(self.exchange.profits_sum, 0)
 
         expected = (
-            "✅ *Position Closed #2 — SL Hit*\n"
+            "✅ *Position Closed* #Position_2\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *1h*\n"
-            "Entry → Exit: `200.0000` → `190.0000`\n"
             "Profit: *1*\n"
+            "`200.0000` → `190.0000`\n"
             "Duration: `04:22:30`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `3`\n"
