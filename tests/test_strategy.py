@@ -7,24 +7,24 @@ class TestStrategyHammerCandles(unittest.TestCase):
         self.strategy = StrategyHammerCandles()
 
     def test_bullish_hammer(self):
-        candle = [0, "100", "105", "90", "104"]  # open, high, low, close
+        candle = [0, "100", "111", "80", "110"]  # open, high, low, close
         dummy = [1, "0", "0", "0", "0"]
         result = self.strategy.generate_signal([candle, dummy])
         self.assertIsInstance(result, Signal)
         self.assertEqual(result.type, "Long")
-        self.assertEqual(result.entry, 104.0)
-        self.assertEqual(result.sl, 95.0)
-        self.assertEqual(result.tp, 113.0)
+        self.assertEqual(result.entry, 110.0)
+        self.assertEqual(result.sl, 90.0)
+        self.assertEqual(result.tp, 130.0)
 
     def test_bearish_hammer(self):
-        candle = [0, "105", "120", "103", "104"]
+        candle = [0, "100", "120", "89", "90"]
         dummy = [1, "0", "0", "0", "0"]
         result = self.strategy.generate_signal([candle, dummy])
         self.assertIsInstance(result, Signal)
         self.assertEqual(result.type, "Short")
-        self.assertEqual(result.entry, 104.0)
-        self.assertEqual(result.sl, 112.5)
-        self.assertEqual(result.tp, 95.5)
+        self.assertEqual(result.entry, 90.0)
+        self.assertEqual(result.sl, 110)
+        self.assertEqual(result.tp, 70)
 
     def test_non_hammer_green(self):
         candle = [0, "100", "101", "99", "102"]

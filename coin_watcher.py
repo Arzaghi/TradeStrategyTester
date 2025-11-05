@@ -34,6 +34,8 @@ class CoinWatcher:
                 candle_time=current_candle_time,
                 open_time=datetime.fromtimestamp(current_candle_time / 1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
                 entry=signal.entry,
+                initial_sl=signal.sl,
+                initial_tp=signal.tp,
                 sl=signal.sl,
                 tp=signal.tp,
                 status="open",

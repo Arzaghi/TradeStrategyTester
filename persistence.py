@@ -1,26 +1,26 @@
 import csv
 import os
-from models import Position
 
 class CSVLogger:
-    def __init__(self, filename="logs.csv"):
+    def __init__(self, filename, fieldnames):
         self.filename = filename
+        self.fieldnames = fieldnames
 
-    def write(self, position: Position):
-        file_exists = os.path.isfile(self.filename)
-        fieldnames = list(Position.__annotations__.keys())
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
 
-        # Prepare row with formatted floats
-        row = []
-        for field in fieldnames:
-            value = getattr(position, field)
-            if isinstance(value, float):
-                row.append(f"{value:.4f}")
-            else:
-                row.append(value)
+    def write(self, obj):
+        write_header = not os.path.isfile(self.filename) or os.path.getsize(self.filename) == 0
+
+        row = [getattr(obj, field, None) for field in self.fieldnames]
 
         with open(self.filename, mode='a', newline='') as file:
             writer = csv.writer(file)
-            if not file_exists:
-                writer.writerow(fieldnames)
+            if write_header:
+                writer.writerow(self.fieldnames)
             writer.writerow(row)
+
+class PositionsHistoryLogger(CSVLogger):
+    def __init__(self, filename):
+        fieldnames = ["type", "symbol", "interval", "entry", "initial_sl", "initial_tp", "exit_price", "open_time", "close_time", "duration", "profit"]
+        super().__init__(filename=filename, fieldnames=fieldnames)

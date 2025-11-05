@@ -3,7 +3,7 @@ import os
 import logging
 from api import BinanceAPI
 from strategy import StrategyHammerCandles
-from persistence import CSVLogger
+from persistence import PositionsHistoryLogger
 from utils import get_git_commit_hash
 from telegram_notifier import TelegramNotifier
 from coin_watcher import CoinWatcher
@@ -20,19 +20,19 @@ def main():
     channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
     telegram = TelegramNotifier(bot_token, channel_id)
     api = BinanceAPI()
-    logger = CSVLogger()
+    logger_positions_hisory = PositionsHistoryLogger("/HDD/positions_hisory.csv")
     strategy = StrategyHammerCandles()
     watchers = [CoinWatcher(symbol, interval, api, strategy, None) for symbol in symbols for interval in intervals]
-    exchange = VirtualExchange(api, telegram, logger)
+    exchange = VirtualExchange(api, telegram, logger_positions_hisory)
 
-    message = (
+    hello_message = (
         f"Started Version On Server: {current_version}\n"
         f"Number of Watchers: {len(watchers)}\n"
         f"Watching Coins: {symbols}\n"
         f"Watching TimeFrames: {intervals}\n"
     )
-    logging.info(message)
-    telegram.send_message(message)
+    logging.info(hello_message)
+    telegram.send_message(hello_message)
 
     try:
         while True:

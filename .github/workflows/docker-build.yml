@@ -48,6 +48,9 @@ jobs:
         script: |
           set -e
 
+          echo "Creating persistent hdd folder on host..."
+          mkdir -p /trader_bot_hdd
+
           echo "Stopping existing container if running..."
           if docker ps -q -f name=traderBot; then
             docker stop traderBot || echo "Failed to stop traderBot"
@@ -65,4 +68,5 @@ jobs:
           docker run -d -t --name traderBot \
             -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
             -e TELEGRAM_CHANNEL_ID=${{ secrets.TELEGRAM_CHANNEL_ID }} \
+            -v /trader_bot_hdd:/HDD \
             arzaghi/trader-bot:latest

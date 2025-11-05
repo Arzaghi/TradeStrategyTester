@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 from coin_watcher import CoinWatcher
 from models import Signal, Position
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 
 class TestCoinWatcher(unittest.TestCase):

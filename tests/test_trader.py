@@ -18,12 +18,12 @@ class MockStrategy:
     def __init__(self):
         self.called = False
 
-    def generate_signal(self, candles):
+    def generate_signal(self, _):
         if not self.called:
             self.called = True
             return [
-                Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 120, "OPEN", "Long", time.time(), rr_ratio=1.0),
-                Position("BTCUSDT", "1h", 1, "2023-01-01 00:00:00", 105, 90, 135, "OPEN", "Long", time.time(), rr_ratio=2.0)
+                Position(symbol="BTCUSDT", interval="1h", candle_time=1, open_time="2023-01-01 00:00:00", entry=105, initial_sl=90, initial_tp=120, sl=90, tp=120, status="OPEN", type="Long",start_timestamp=time.time(), rr_ratio=1.0),
+                Position(symbol="BTCUSDT", interval="1h", candle_time=1, open_time="2023-01-01 00:00:00", entry=105, initial_sl=90, initial_tp=135, sl=90, tp=135, status="OPEN", type="Long",start_timestamp=time.time(), rr_ratio=2.0)
             ]
         return []
 

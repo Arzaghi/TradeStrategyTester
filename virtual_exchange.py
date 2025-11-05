@@ -68,8 +68,7 @@ class VirtualExchange:
         pos.exit_reason = reason
         pos.status = "closed"
         pos.close_time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
-        pos.duration = int(time.time() - pos.start_timestamp)
-
+        pos.duration = str(timedelta(seconds=int(time.time() - pos.start_timestamp))).zfill(8)
 
         self.closed_positions.append(pos)
 
@@ -79,7 +78,7 @@ class VirtualExchange:
             self.sl_hits += 1
         else:
             self.breakeven_hits += 1
-        self.profits_sum += pos.profit  # Add final profit to total
+        self.profits_sum += pos.profit
 
         if self.logger:
             try:
@@ -106,7 +105,7 @@ class VirtualExchange:
             f"Closed: `{nclosed}`\n"
             f"Open: `{nopen_}`\n"
             f"TP Hits: `{self.tp_hits}`\n"
-            f"En Hits: `{self.breakeven_hits}`\n"
+            f"EN Hits: `{self.breakeven_hits}`\n"
             f"SL Hits: `{self.sl_hits}`\n"
             f"Total Profit: `{self.profits_sum}`\n"
         )
@@ -121,8 +120,8 @@ class VirtualExchange:
             return
         nclosed = len(self.closed_positions)
         nopen_ = len(self.open_positions) - 1
-        duration_str = str(timedelta(seconds=pos.duration))
-        h, m, s = map(int, duration_str.split(":"))
+        h, m, s = map(int, pos.duration.split(":"))
+        f"Duration: `{h:02}:{m:02}:{s:02}`\n\n\n"
 
         emoji = "✅" if pos.profit > 0 else "⛔" if pos.profit < 0 else "😐"
         message = (
@@ -132,12 +131,12 @@ class VirtualExchange:
             f"Timeframe: *{pos.interval}*\n"
             f"Entry → Exit: `{pos.entry:.4f}` → `{pos.exit_price:.4f}`\n"
             f"Profit: *{pos.profit}*\n"
-            f"Duration: `{h:02}:{m:02}:{s:02}`\n\n\n"
+            f"Duration: `{pos.duration}`\n\n\n"
             f"📊 *Stats*\n"
             f"Closed: `{nclosed}`\n"
             f"Open: `{nopen_}`\n"
             f"TP Hits: `{self.tp_hits}`\n"
-            f"En Hits: `{self.breakeven_hits}`\n"
+            f"EN Hits: `{self.breakeven_hits}`\n"
             f"SL Hits: `{self.sl_hits}`\n"
             f"Total Profit: `{self.profits_sum}`\n"
         )
