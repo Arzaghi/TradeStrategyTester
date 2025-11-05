@@ -3,7 +3,7 @@ import os
 import logging
 from api import BinanceAPI
 from strategy import StrategyHammerCandles
-from persistence import PositionsHistoryLogger
+from persistence import PositionsHistoryLogger, CurrentPositionsLogger
 from utils import get_git_commit_hash
 from telegram_notifier import TelegramNotifier
 from coin_watcher import CoinWatcher
@@ -20,10 +20,11 @@ def main():
     channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
     telegram = TelegramNotifier(bot_token, channel_id)
     api = BinanceAPI()
-    logger_positions_hisory = PositionsHistoryLogger("/HDD/positions_hisory.csv")
+    positions_history_logger = PositionsHistoryLogger("/HDD/positions_history.csv")
+    current_positions_logger = CurrentPositionsLogger("/HDD/current_positions.csv")
     strategy = StrategyHammerCandles()
     watchers = [CoinWatcher(symbol, interval, api, strategy, None) for symbol in symbols for interval in intervals]
-    exchange = VirtualExchange(api, telegram, logger_positions_hisory)
+    exchange = VirtualExchange(api, telegram, positions_history_logger=positions_history_logger, current_positions_logger=current_positions_logger)
 
     hello_message = (
         f"Started Version On Server: {current_version}\n"

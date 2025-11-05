@@ -2,10 +2,11 @@ from datetime import timedelta
 import time
 
 class VirtualExchange:
-    def __init__(self, api, notifier, logger=None):
+    def __init__(self, api, notifier, positions_history_logger=None, current_positions_logger=None):
         self.api = api
         self.notifier = notifier
-        self.logger = logger
+        self.positions_history_logger = positions_history_logger
+        self.current_positions_logger = current_positions_logger
         self.open_positions = []
         self.closed_positions = []
         self.position_counter = 0
@@ -29,7 +30,7 @@ class VirtualExchange:
         for pos in self.open_positions:
             try:
                 price = self.api.get_current_price(pos.symbol)
-
+                pos.current_price = price
                 if pos.type == "Long":
                     if price <= pos.sl:
                         self._close_position(pos, price, "SL Hit")
@@ -53,6 +54,15 @@ class VirtualExchange:
                 still_open.append(pos)
 
         self.open_positions = still_open
+        for pos in self.open_positions:
+            pos.current_profit = pos.profit
+            pos.current_sl = pos.sl
+            pos.next_tp = pos.tp
+        if self.current_positions_logger:
+            try:
+                self.current_positions_logger.write(self.open_positions)
+            except Exception as e:
+                print(f"[VirtualExchange] Failed to log current position: {e}")
 
     def _handle_tp_extension(self, pos):
         if pos.type == "Long":
@@ -80,9 +90,9 @@ class VirtualExchange:
             self.breakeven_hits += 1
         self.profits_sum += pos.profit
 
-        if self.logger:
+        if self.positions_history_logger:
             try:
-                self.logger.write(pos)
+                self.positions_history_logger.write(pos)
             except Exception as e:
                 print(f"[VirtualExchange] Failed to log position: {e}")
 

@@ -3,7 +3,7 @@ import tempfile
 import os
 import time
 import shutil
-from persistence import CSVLogger, PositionsHistoryLogger
+from persistence import CSVLogger, PositionsHistoryLogger, CurrentPositionsLogger
 from models import Position
 
 class TestCSVLoggerFolderCreation(unittest.TestCase):
@@ -171,3 +171,88 @@ class TestPositionsHistoryLogger(unittest.TestCase):
         )
         content = self.read_csv_as_string()
         self.assertEqual(content, expected)
+
+class TestCurrentPositionsLogger(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.filename = os.path.join(self.temp_dir.name, "current.csv")
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def read_csv_as_string(self):
+        with open(self.filename, "r", encoding="utf-8") as f:
+            return f.read().replace("\r\n", "\n")
+
+    def test_overwrites_file_on_each_write(self):
+        pos1 = Position(
+            symbol="BTCUSDT",
+            interval="1h",
+            candle_time=1,
+            open_time="2023-01-01 00:00:00",
+            entry=100,
+            initial_sl=90,
+            initial_tp=120,
+            sl=160,
+            tp=180,
+            status="OPEN",
+            type="Long",
+            start_timestamp=time.time(),
+            close_time="",
+            duration="",
+            exit_price="",
+            exit_reason="",
+            rr_ratio=1.5,
+            profit=-1
+        )
+        pos1.id = 100
+        pos1.current_sl=160
+        pos1.next_tp=180
+        pos1.current_profit=5
+        pos1.current_price=102981
+
+        pos2 = Position(
+            symbol="ETHUSDT",
+            interval="4h",
+            candle_time=2,
+            open_time="2023-01-01 04:00:00",
+            entry=200,
+            initial_sl=180,
+            initial_tp=240,
+            sl=260,
+            tp=280,
+            status="OPEN",
+            type="Short",
+            start_timestamp=time.time(),
+            close_time="",
+            duration="",
+            exit_price="",
+            exit_reason="",
+            rr_ratio=2.0,
+            profit=-1
+        )
+        pos2.id = 101
+        pos2.current_sl=260
+        pos2.next_tp=280
+        pos2.current_profit=3
+        pos2.current_price = 3362
+
+        logger = CurrentPositionsLogger(filename=self.filename)
+
+        # First write
+        logger.write([pos1, pos2])
+        print(self.read_csv_as_string())
+        expected1 = (
+            "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
+            f"{pos1.id},{pos1.type},{pos1.symbol},{pos1.interval},{pos1.open_time},{pos1.entry},{pos1.initial_sl},{pos1.current_sl},{pos1.next_tp},{pos1.current_profit},{pos1.current_price}\n"
+            f"{pos2.id},{pos2.type},{pos2.symbol},{pos2.interval},{pos2.open_time},{pos2.entry},{pos2.initial_sl},{pos2.current_sl},{pos2.next_tp},{pos2.current_profit},{pos2.current_price}\n"
+        )
+        self.assertEqual(self.read_csv_as_string(), expected1)
+
+        # Second write (should overwrite)
+        logger.write([pos2])
+        expected2 = (
+            "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
+            f"{pos2.id},{pos2.type},{pos2.symbol},{pos2.interval},{pos2.open_time},{pos2.entry},{pos2.initial_sl},{pos2.current_sl},{pos2.next_tp},{pos2.current_profit},{pos2.current_price}\n"
+        )
+        self.assertEqual(self.read_csv_as_string(), expected2)
