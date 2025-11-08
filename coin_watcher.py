@@ -1,9 +1,11 @@
 import time
 from models import Signal, Position
 from datetime import datetime, timedelta, timezone
+from strategies.strategy_interface import IStrategy
+from notifiers.notifier_interface import INotifier
 
 class CoinWatcher:
-    def __init__(self, symbol: str, interval: str, api, strategy, notifier):
+    def __init__(self, symbol: str, interval: str, api, strategy: IStrategy, notifier: INotifier):
         self.symbol = symbol
         self.interval = interval
         self.api = api
@@ -100,4 +102,4 @@ class CoinWatcher:
             f"*Entry:* `{signal.entry:.4f}`\n"
             f"*Stop Loss:* `{signal.sl:.4f}`"
         )
-        self.notifier.send_message(message, parse_mode="Markdown")
+        self.notifier.send_message(message)

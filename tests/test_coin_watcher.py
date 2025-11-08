@@ -50,10 +50,9 @@ class TestCoinWatcher(unittest.TestCase):
         self.strategy.generate_signal = MagicMock(return_value=Signal(entry=105.0, sl=95.0, tp=115.0, type="Long"))
         self.watcher.watch()
         self.notifier.send_message.assert_called_once()
-        args, kwargs = self.notifier.send_message.call_args
+        args, _ = self.notifier.send_message.call_args
         self.assertIn("Entry", args[0])
         self.assertIn("Stop Loss", args[0])
-        self.assertEqual(kwargs["parse_mode"], "Markdown")
 
     def test_watch_no_alert_if_no_signal(self):
         self.watcher._is_new_candle_due = MagicMock(return_value=True)
@@ -262,11 +261,10 @@ class TestCoinWatcher(unittest.TestCase):
         self.watcher.watch()
 
         self.notifier.send_message.assert_called_once()
-        args, kwargs = self.notifier.send_message.call_args
+        args, _ = self.notifier.send_message.call_args
         self.assertIn("Entry", args[0])
         self.assertIn("Stop Loss", args[0])
         self.assertIn("Long", args[0])
-        self.assertEqual(kwargs["parse_mode"], "Markdown")
 
     def test_5m_interval_boundary(self):
         watcher = CoinWatcher(self.symbol, "5m", self.api, self.strategy, self.notifier)

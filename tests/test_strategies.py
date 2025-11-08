@@ -1,5 +1,5 @@
 import unittest
-from strategy import StrategyHammerCandles, HammerCandle
+from strategies.strategy_hammer_candles import StrategyHammerCandles, HammerCandle
 from models import Signal
 
 class TestStrategyHammerCandles(unittest.TestCase):
@@ -52,14 +52,14 @@ class TestStrategyHammerCandles(unittest.TestCase):
 
     def test_candle_hammer_type_direct(self):
         self.assertEqual(
-            self.strategy.candle_hammer_type(100, 102, 90, 105),
+            self.strategy._candle_hammer_type(100, 102, 90, 105),
             HammerCandle.BULLISH_HAMMER
         )
         self.assertEqual(
-            self.strategy.candle_hammer_type(105, 120, 104, 100),
+            self.strategy._candle_hammer_type(105, 120, 104, 100),
             HammerCandle.BEARISH_HAMMER
         )
         self.assertEqual(
-            self.strategy.candle_hammer_type(100, 101, 99, 102),
+            self.strategy._candle_hammer_type(100, 101, 99, 102),
             HammerCandle.NON_HAMMER
         )

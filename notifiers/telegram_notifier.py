@@ -6,17 +6,17 @@ class TelegramNotifier:
         self.chat_id = chat_id
         self.api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
-    def send_message(self, text: str, parse_mode: str = "Markdown"):
+    def send_message(self, text: str) -> bool:
         payload = {
             "chat_id": self.chat_id,
             "text": text,
-            "parse_mode": parse_mode
+            "parse_mode": "Markdown"
         }
 
         try:
             response = requests.post(self.api_url, data=payload)
             response.raise_for_status()
-            return response.json()
+            return True
         except Exception as e:
             print(f"[TelegramNotifier] Failed to send message: {e}")
-            return None
+            return False

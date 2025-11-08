@@ -1,19 +1,23 @@
 from enum import Enum
 from models import Signal
+from strategies.strategy_interface import IStrategy
 
 class HammerCandle(Enum):
     NON_HAMMER = 0
     BULLISH_HAMMER = 1
     BEARISH_HAMMER = 2
 
-class StrategyHammerCandles:
+class HammerCandle(Enum):
+    NON_HAMMER = 0
+    BULLISH_HAMMER = 1
+    BEARISH_HAMMER = 2
+
+
+class StrategyHammerCandles(IStrategy):
     STRATEGY_NAME = "Hammer Candle"
-    REQUIRED_CANDLES = 2 # Current and Previous Candle
+    REQUIRED_CANDLES = 2 # Current running candle and previous closed candle
 
-    def __init__(self):
-        pass
-
-    def candle_hammer_type(self, open_, high, low, close):
+    def _candle_hammer_type(self, open_, high, low, close):
         MIN_SHADOW_TO_BODY_RATIO = 2.0
         MAX_OPPOSITE_SHADOW_RATIO = 0.2
 
@@ -44,7 +48,7 @@ class StrategyHammerCandles:
             return None
 
         open_, high, low, close = map(float, candles[0][1:5])
-        hammer_type = self.candle_hammer_type(open_, high, low, close)
+        hammer_type = self._candle_hammer_type(open_, high, low, close)
         if hammer_type == HammerCandle.BULLISH_HAMMER:
             bottom_shadow = min(open_, close) - low
             sl = low + (bottom_shadow / 2)
@@ -57,5 +61,4 @@ class StrategyHammerCandles:
             tp = close - (sl - close)
             return Signal(entry=close, sl=sl, tp=tp, type="Short")
 
-        else:
-            return
+        return None

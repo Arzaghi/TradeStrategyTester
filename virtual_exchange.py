@@ -1,10 +1,11 @@
 from datetime import timedelta
+from notifiers.notifier_interface import INotifier
 import time
 
 class VirtualExchange:
-    def __init__(self, api, notifier, positions_history_logger=None, current_positions_logger=None):
+    def __init__(self, api, notifier: INotifier, positions_history_logger=None, current_positions_logger=None):
         self.api = api
-        self.notifier = notifier
+        self.notifier: INotifier = notifier
         self.positions_history_logger = positions_history_logger
         self.current_positions_logger = current_positions_logger
         self.open_positions = []
