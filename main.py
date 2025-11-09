@@ -26,6 +26,7 @@ def main():
 
     hello_message = (
         f"Started Version On Server: {get_git_commit_hash()}\n"
+        f"Strategy: Hammer but reverse positions.!\n"
         f"Number of Watchers: {len(watchers)}\n"
         f"Watching Coins: {symbols}\n"
         f"Watching TimeFrames: {intervals}\n"

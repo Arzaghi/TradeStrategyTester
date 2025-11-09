@@ -93,9 +93,9 @@ class TestVirtualExchange(unittest.TestCase):
         for _ in range(4):
             self.exchange.tick()
 
-        self.assertEqual(pos.profit, 2)
-        self.assertEqual(self.exchange.tp_hits, 2)
-        self.assertEqual(self.exchange.profits_sum, 2)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(self.exchange.tp_hits, 1)
+        self.assertEqual(self.exchange.profits_sum, 1)
         self.assertEqual(len(self.exchange.closed_positions), 1)
 
     def test_tp_extension_short_position(self):
@@ -106,9 +106,9 @@ class TestVirtualExchange(unittest.TestCase):
         for _ in range(4):
             self.exchange.tick()
 
-        self.assertEqual(pos.profit, 2)
-        self.assertEqual(self.exchange.tp_hits, 2)
-        self.assertEqual(self.exchange.profits_sum, 2)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(self.exchange.tp_hits, 1)
+        self.assertEqual(self.exchange.profits_sum, 1)
         self.assertEqual(len(self.exchange.closed_positions), 1)
 
     def test_open_position_assigns_id_and_notifies(self):
@@ -155,21 +155,20 @@ class TestVirtualExchange(unittest.TestCase):
 
         expected_current_positions_logs = (
             "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
-            "1,Long,BTCUSDT,15m,2023-11-01 00:00:00,100.0,90.0,100.0,120.0,0,110.0\n"
         )
         self.check_logs(self.current_positions_logs_filename, expected_current_positions_logs)
 
         # Position should still be open
-        self.assertEqual(len(self.exchange.open_positions), 1)
-        self.assertEqual(len(self.exchange.closed_positions), 0)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
 
         # Profit should be updated to 0
-        self.assertEqual(pos.profit, 0)
-        self.assertEqual(pos.sl, 100)
-        self.assertEqual(pos.tp, 120)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 90)
+        self.assertEqual(pos.tp, 110)
 
         # No TP or SL hits yet
-        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.tp_hits, 1)
         self.assertEqual(self.exchange.sl_hits, 0)
 
         self.api.get_current_price.return_value = 101.0
@@ -177,17 +176,16 @@ class TestVirtualExchange(unittest.TestCase):
 
         expected_current_positions_logs = (
             "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
-            "1,Long,BTCUSDT,15m,2023-11-01 00:00:00,100.0,90.0,100.0,120.0,0,101.0\n"
         )
         self.check_logs(self.current_positions_logs_filename, expected_current_positions_logs)
 
 
-        self.assertEqual(len(self.exchange.open_positions), 1)
-        self.assertEqual(len(self.exchange.closed_positions), 0)
-        self.assertEqual(pos.profit, 0)
-        self.assertEqual(pos.sl, 100)
-        self.assertEqual(pos.tp, 120)
-        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 90)
+        self.assertEqual(pos.tp, 110)
+        self.assertEqual(self.exchange.tp_hits, 1)
         self.assertEqual(self.exchange.sl_hits, 0)
 
         self.api.get_current_price.return_value = 121.0
@@ -197,37 +195,36 @@ class TestVirtualExchange(unittest.TestCase):
 
         expected_current_positions_logs = (
             "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
-            "1,Long,BTCUSDT,15m,2023-11-01 00:00:00,100.0,90.0,110.0,130.0,1,121.0\n"
         )
         self.check_logs(self.current_positions_logs_filename, expected_current_positions_logs)
 
 
-        self.assertEqual(len(self.exchange.open_positions), 1)
-        self.assertEqual(len(self.exchange.closed_positions), 0)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
         self.assertEqual(pos.profit, 1)
-        self.assertEqual(pos.sl, 110)
-        self.assertEqual(pos.tp, 130)
-        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(pos.sl, 90)
+        self.assertEqual(pos.tp, 110)
+        self.assertEqual(self.exchange.tp_hits, 1)
         self.assertEqual(self.exchange.sl_hits, 0)
 
         self.api.get_current_price.return_value = 131.0
         self.exchange.tick() # new TP hit
-        self.assertEqual(len(self.exchange.open_positions), 1)
-        self.assertEqual(len(self.exchange.closed_positions), 0)
-        self.assertEqual(pos.profit, 2)
-        self.assertEqual(pos.sl, 120)
-        self.assertEqual(pos.tp, 140)
-        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 90)
+        self.assertEqual(pos.tp, 110)
+        self.assertEqual(self.exchange.tp_hits, 1)
         self.assertEqual(self.exchange.sl_hits, 0)
 
         self.api.get_current_price.return_value = 120.0
         self.exchange.tick() # stop loss
         self.assertEqual(len(self.exchange.open_positions), 0)
         self.assertEqual(len(self.exchange.closed_positions), 1)
-        self.assertEqual(pos.profit, 2)
-        self.assertEqual(pos.sl, 120)
-        self.assertEqual(pos.tp, 140)
-        self.assertEqual(self.exchange.tp_hits, 2)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 90)
+        self.assertEqual(pos.tp, 110)
+        self.assertEqual(self.exchange.tp_hits, 1)
         self.assertEqual(self.exchange.sl_hits, 0)
 
         expected = (
@@ -235,16 +232,16 @@ class TestVirtualExchange(unittest.TestCase):
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Profit: *2*\n"
-            "`100.0000` → `120.0000`\n"
+            "Profit: *1*\n"
+            "`100.0000` → `110.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
             "Open: `0`\n"
-            "TP Hits: `2`\n"
+            "TP Hits: `1`\n"
             "EN Hits: `0`\n"
             "SL Hits: `0`\n"
-            "Total Profit: `2`\n"
+            "Total Profit: `1`\n"
         )
 
         self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
@@ -283,44 +280,44 @@ class TestVirtualExchange(unittest.TestCase):
         self.exchange.tick() # First TP hit
 
         # Position should still be open
-        self.assertEqual(len(self.exchange.open_positions), 1)
-        self.assertEqual(len(self.exchange.closed_positions), 0)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 1)
 
         # Profit should be updated to 0
-        self.assertEqual(pos.profit, 0)
-        self.assertEqual(pos.sl, 100)
-        self.assertEqual(pos.tp, 120)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 90)
+        self.assertEqual(pos.tp, 110)
 
         # No TP or SL hits yet
-        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.tp_hits, 1)
         self.assertEqual(self.exchange.sl_hits, 0)
 
         self.api.get_current_price.return_value = 100
         self.exchange.tick() # Stop hit on Entry
         self.assertEqual(len(self.exchange.open_positions), 0)
         self.assertEqual(len(self.exchange.closed_positions), 1)
-        self.assertEqual(pos.profit, 0)
-        self.assertEqual(pos.sl, 100)
-        self.assertEqual(pos.tp, 120)
-        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 90)
+        self.assertEqual(pos.tp, 110)
+        self.assertEqual(self.exchange.tp_hits, 1)
         self.assertEqual(self.exchange.sl_hits, 0)
-        self.assertEqual(self.exchange.breakeven_hits, 1)
+        self.assertEqual(self.exchange.breakeven_hits, 0)
 
         expected = (
-            "😐 *Position Closed* #Position1\n"
+            "✅ *Position Closed* #Position1\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Profit: *0*\n"
-            "`100.0000` → `100.0000`\n"
+            "Profit: *1*\n"
+            "`100.0000` → `110.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
             "Open: `0`\n"
-            "TP Hits: `0`\n"
-            "EN Hits: `1`\n"
+            "TP Hits: `1`\n"
+            "EN Hits: `0`\n"
             "SL Hits: `0`\n"
-            "Total Profit: `0`\n"
+            "Total Profit: `1`\n"
         )
         self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
 
@@ -406,27 +403,27 @@ class TestVirtualExchange(unittest.TestCase):
 
         self.api.get_current_price.return_value = 90.0
         self.exchange.tick()  # First TP hit
-        self.assertEqual(pos.profit, 0)
-        self.assertEqual(pos.sl, 100)
-        self.assertEqual(pos.tp, 80)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 110)
+        self.assertEqual(pos.tp, 90)
 
         self.api.get_current_price.return_value = 79.0
         self.exchange.tick()  # Second TP hit
         self.assertEqual(pos.profit, 1)
-        self.assertEqual(pos.sl, 90)
-        self.assertEqual(pos.tp, 70)
+        self.assertEqual(pos.sl, 110)
+        self.assertEqual(pos.tp, 90)
 
         self.api.get_current_price.return_value = 69.0
         self.exchange.tick()  # Third TP hit
-        self.assertEqual(pos.profit, 2)
-        self.assertEqual(pos.sl, 80)
-        self.assertEqual(pos.tp, 60)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 110)
+        self.assertEqual(pos.tp, 90)
 
         self.api.get_current_price.return_value = 80.0
         self.exchange.tick()  # SL hit
         self.assertEqual(len(self.exchange.open_positions), 0)
         self.assertEqual(len(self.exchange.closed_positions), 1)
-        self.assertEqual(self.exchange.tp_hits, 2)
+        self.assertEqual(self.exchange.tp_hits, 1)
         self.assertEqual(self.exchange.sl_hits, 0)
 
         expected_close = (
@@ -434,16 +431,16 @@ class TestVirtualExchange(unittest.TestCase):
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"            
-            "Profit: *2*\n"
-            "`100.0000` → `80.0000`\n"
+            "Profit: *1*\n"
+            "`100.0000` → `90.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
             "Open: `0`\n"
-            "TP Hits: `2`\n"
+            "TP Hits: `1`\n"
             "EN Hits: `0`\n"
             "SL Hits: `0`\n"
-            "Total Profit: `2`\n"
+            "Total Profit: `1`\n"
         )
         self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
 
@@ -473,32 +470,32 @@ class TestVirtualExchange(unittest.TestCase):
 
         self.api.get_current_price.return_value = 90.0
         self.exchange.tick()  # First TP hit
-        self.assertEqual(pos.profit, 0)
-        self.assertEqual(pos.sl, 100)
-        self.assertEqual(pos.tp, 80)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(pos.sl, 110)
+        self.assertEqual(pos.tp, 90)
 
         self.api.get_current_price.return_value = 100.0
         self.exchange.tick()  # SL hit at entry
         self.assertEqual(len(self.exchange.open_positions), 0)
         self.assertEqual(len(self.exchange.closed_positions), 1)
-        self.assertEqual(pos.profit, 0)
-        self.assertEqual(self.exchange.breakeven_hits, 1)
+        self.assertEqual(pos.profit, 1)
+        self.assertEqual(self.exchange.breakeven_hits, 0)
 
         expected_close = (
-            "😐 *Position Closed* #Position1\n"
+            "✅ *Position Closed* #Position1\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Profit: *0*\n"
-            "`100.0000` → `100.0000`\n"
+            "Profit: *1*\n"
+            "`100.0000` → `90.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `1`\n"
             "Open: `0`\n"
-            "TP Hits: `0`\n"
-            "EN Hits: `1`\n"
+            "TP Hits: `1`\n"
+            "EN Hits: `0`\n"
             "SL Hits: `0`\n"
-            "Total Profit: `0`\n"
+            "Total Profit: `1`\n"
         )
         self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
 
@@ -654,23 +651,23 @@ class TestVirtualExchange(unittest.TestCase):
 
         self.assertEqual(self.exchange.tp_hits, 2)
         self.assertEqual(self.exchange.sl_hits, 1)
-        self.assertEqual(self.exchange.breakeven_hits, 1)
+        self.assertEqual(self.exchange.breakeven_hits, 0)
         self.assertEqual(self.exchange.profits_sum, 1)
         self.assertEqual(len(self.exchange.closed_positions), 3)
         
         expected = (
-            "😐 *Position Closed* #Position3\n"
+            "✅ *Position Closed* #Position3\n"
             "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"            
-            "Profit: *0*\n"
-            "`100.0000` → `100.0000`\n"
+            "Profit: *1*\n"
+            "`100.0000` → `110.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `3`\n"
             "Open: `0`\n"
             "TP Hits: `2`\n"
-            "EN Hits: `1`\n"
+            "EN Hits: `0`\n"
             "SL Hits: `1`\n"
             "Total Profit: `1`\n"
         )
@@ -687,7 +684,6 @@ class TestVirtualExchange(unittest.TestCase):
 
         expected_current_positions_logs = (
             "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
-            "1,Long,BTCUSDT,15m,2023-11-01 00:00:00,100.0,90.0,100.0,120.0,0,110.0\n"
         )
         self.check_logs(self.current_positions_logs_filename, expected_current_positions_logs)
 
@@ -696,7 +692,6 @@ class TestVirtualExchange(unittest.TestCase):
 
         expected_current_positions_logs = (
             "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
-            "1,Long,BTCUSDT,15m,2023-11-01 00:00:00,100.0,90.0,110.0,130.0,1,121.0\n"
         )
         self.check_logs(self.current_positions_logs_filename, expected_current_positions_logs)
 
@@ -707,11 +702,10 @@ class TestVirtualExchange(unittest.TestCase):
         self.exchange.open_position(short_simul)
 
         self.api.get_current_price.return_value = 120.0
-        self.exchange.tick()  # 3 open Positions now
+        self.exchange.tick()  # 2 open Positions now
 
         expected_current_positions_logs = (
             "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
-            "1,Long,BTCUSDT,15m,2023-11-01 00:00:00,100.0,90.0,110.0,130.0,1,120.0\n"
             "2,Long,BTCUSDT,15m,2023-11-01 00:00:00,120.0,110.0,110.0,130.0,-1,120.0\n"
             "3,Short,BTCUSDT,15m,2023-11-01 00:00:00,120.0,140.0,140.0,100.0,-1,120.0\n"
         )
@@ -729,7 +723,6 @@ class TestVirtualExchange(unittest.TestCase):
         print(self.read_logs_as_string(self.current_positions_logs_filename))
         expected_current_positions_logs = (
             "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
-            "3,Short,BTCUSDT,15m,2023-11-01 00:00:00,120.0,140.0,120.0,80.0,0,94.0\n"
         )
         self.check_logs(self.current_positions_logs_filename, expected_current_positions_logs)
 
@@ -745,27 +738,27 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(len(self.exchange.closed_positions), 3)
         self.assertEqual(len(self.exchange.open_positions), 0)
 
-        self.assertEqual(self.exchange.tp_hits, 1)  # short_simul
+        self.assertEqual(self.exchange.tp_hits, 2)  # short_simul
         self.assertEqual(self.exchange.sl_hits, 1)  # long_simul
-        self.assertEqual(self.exchange.breakeven_hits, 1)
-        self.assertEqual(self.exchange.profits_sum, 0)  # 1 + (-1) + 0
+        self.assertEqual(self.exchange.breakeven_hits, 0)
+        self.assertEqual(self.exchange.profits_sum, 1)
 
         # Final closed position notification (long_simul)
         expected_close = (
-            "😐 *Position Closed* #Position3\n"
+            "✅ *Position Closed* #Position3\n"
             "Type: *Short*\n"
             "Symbol: *BTCUSDT*\n"
             "Timeframe: *15m*\n"
-            "Profit: *0*\n"
-            "`120.0000` → `120.0000`\n"
+            "Profit: *1*\n"
+            "`120.0000` → `94.0000`\n"
             "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `3`\n"
             "Open: `0`\n"
-            "TP Hits: `1`\n"
-            "EN Hits: `1`\n"
+            "TP Hits: `2`\n"
+            "EN Hits: `0`\n"
             "SL Hits: `1`\n"
-            "Total Profit: `0`\n"
+            "Total Profit: `1`\n"
         )
         self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
 
@@ -795,65 +788,65 @@ class TestVirtualExchange(unittest.TestCase):
         self.api.get_current_price.return_value = 110
         self.exchange.tick()
 
-        self.assertEqual(len(self.exchange.open_positions), 2)
-        self.assertEqual(len(self.exchange.closed_positions), 1)
-        self.assertEqual(long_pos.profit, 0)
-        self.assertEqual(short_pos.profit, 0)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 3)
+        self.assertEqual(long_pos.profit, 1)
+        self.assertEqual(short_pos.profit, 1)
         self.assertEqual(long_sl.profit, -1)        
-        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.tp_hits, 2)
         self.assertEqual(self.exchange.sl_hits, 1)
         self.assertEqual(self.exchange.breakeven_hits, 0)
-        self.assertEqual(self.exchange.profits_sum, -1)
+        self.assertEqual(self.exchange.profits_sum, 1)
 
         # Tick 2: SL hit for long and short
         self.api.get_current_price.return_value = 100
         self.exchange.tick()
 
-        self.assertEqual(len(self.exchange.open_positions), 1)
-        self.assertEqual(len(self.exchange.closed_positions), 2)
-        self.assertEqual(long_pos.profit, 0)
+        self.assertEqual(len(self.exchange.open_positions), 0)
+        self.assertEqual(len(self.exchange.closed_positions), 3)
+        self.assertEqual(long_pos.profit, 1)
         self.assertEqual(short_pos.profit, 1)
         self.assertEqual(long_sl.profit, -1)        
-        self.assertEqual(self.exchange.tp_hits, 0)
+        self.assertEqual(self.exchange.tp_hits, 2)
         self.assertEqual(self.exchange.sl_hits, 1)
-        self.assertEqual(self.exchange.breakeven_hits, 1)
-        self.assertEqual(self.exchange.profits_sum, -1)
+        self.assertEqual(self.exchange.breakeven_hits, 0)
+        self.assertEqual(self.exchange.profits_sum, 1)
 
         self.api.get_current_price.return_value = 190
         self.exchange.tick()
         self.assertEqual(len(self.exchange.open_positions), 0)
         self.assertEqual(len(self.exchange.closed_positions), 3)
-        self.assertEqual(long_pos.profit, 0)
+        self.assertEqual(long_pos.profit, 1)
         self.assertEqual(short_pos.profit, 1)
         self.assertEqual(long_sl.profit, -1) 
         self.assertEqual(short_pos.duration, "04:22:30")       
-        self.assertEqual(self.exchange.tp_hits, 1)
+        self.assertEqual(self.exchange.tp_hits, 2)
         self.assertEqual(self.exchange.sl_hits, 1)
-        self.assertEqual(self.exchange.breakeven_hits, 1)
-        self.assertEqual(self.exchange.profits_sum, 0)
+        self.assertEqual(self.exchange.breakeven_hits, 0)
+        self.assertEqual(self.exchange.profits_sum, 1)
 
         expected = (
-            "✅ *Position Closed* #Position2\n"
-            "Type: *Short*\n"
+            "⛔ *Position Closed* #Position3\n"
+            "Type: *Long*\n"
             "Symbol: *BTCUSDT*\n"
-            "Timeframe: *1h*\n"
-            "Profit: *1*\n"
-            "`200.0000` → `190.0000`\n"
-            "Duration: `04:22:30`\n\n\n"
+            "Timeframe: *4h*\n"
+            "Profit: *-1*\n"
+            "`300.0000` → `110.0000`\n"
+            "Duration: `00:00:00`\n\n\n"
             "📊 *Stats*\n"
             "Closed: `3`\n"
             "Open: `0`\n"
-            "TP Hits: `1`\n"
-            "EN Hits: `1`\n"
+            "TP Hits: `2`\n"
+            "EN Hits: `0`\n"
             "SL Hits: `1`\n"
-            "Total Profit: `0`\n"
+            "Total Profit: `1`\n"
         )
         self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
 
         expected_positions_history_logs = (
             "type,symbol,interval,entry,initial_sl,initial_tp,exit_price,open_time,close_time,duration,profit\n"
+            "Long,BTCUSDT,30m,100.0,90.0,110.0,110,2023-11-01 00:00:00,2025-11-05 10:34:54,00:00:00,1\n"
+            "Short,BTCUSDT,1h,200.0,210.0,190.0,110,2023-11-01 00:00:00,2025-11-05 10:34:54,00:00:00,1\n"
             "Long,BTCUSDT,4h,300.0,290.0,310.0,110,2023-11-01 00:00:00,2025-11-05 10:34:54,00:00:00,-1\n"
-            "Long,BTCUSDT,30m,100.0,90.0,110.0,100,2023-11-01 00:00:00,2025-11-05 10:34:54,00:00:00,0\n"
-            "Short,BTCUSDT,1h,200.0,210.0,190.0,190,2023-11-01 00:00:00,2025-11-05 10:34:54,00:00:00,1\n"
         )
         self.check_logs(self.positions_history_logs_filename, expected_positions_history_logs)

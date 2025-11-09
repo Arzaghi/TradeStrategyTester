@@ -11,6 +11,7 @@ class VirtualExchange:
         self.open_positions = []
         self.closed_positions = []
         self.position_counter = 0
+        self.n_active_positions = 0
         self.tp_hits = 0
         self.sl_hits = 0
         self.breakeven_hits = 0
@@ -19,6 +20,7 @@ class VirtualExchange:
     def open_position(self, position):
         if position is not None:
             self.position_counter += 1
+            self.n_active_positions += 1
             position.id = self.position_counter
             position.profit = -1  # Initial profit
             position.risk = abs(position.entry - position.sl)  # Initial risk
@@ -36,8 +38,8 @@ class VirtualExchange:
                     if price <= pos.sl:
                         self._close_position(pos, price, "SL Hit")
                     elif price >= pos.tp:
-                        self._handle_tp_extension(pos)
-                        still_open.append(pos)
+                        pos.profit = 1
+                        self._close_position(pos, price, "TP Hit")
                     else:
                         still_open.append(pos)
 
@@ -45,8 +47,8 @@ class VirtualExchange:
                     if price >= pos.sl:
                         self._close_position(pos, price, "SL Hit")
                     elif price <= pos.tp:
-                        self._handle_tp_extension(pos)
-                        still_open.append(pos)
+                        pos.profit = 1
+                        self._close_position(pos, price, "TP Hit")
                     else:
                         still_open.append(pos)
 
@@ -82,6 +84,7 @@ class VirtualExchange:
         pos.duration = str(timedelta(seconds=int(time.time() - pos.start_timestamp))).zfill(8)
 
         self.closed_positions.append(pos)
+        self.n_active_positions -= 1
 
         if pos.profit > 0:
             self.tp_hits += pos.profit
@@ -103,7 +106,7 @@ class VirtualExchange:
         if self.notifier is None:
             return
         nclosed = len(self.closed_positions)
-        nopen_ = len(self.open_positions)
+        nopen_ = self.n_active_positions
         message = (
             f"⏳ *Position Opened* #Position{pos.id}\n"
             f"Type: *{pos.type}*\n"
@@ -130,7 +133,7 @@ class VirtualExchange:
         if self.notifier is None:
             return
         nclosed = len(self.closed_positions)
-        nopen_ = len(self.open_positions) - 1
+        nopen_ = self.n_active_positions
 
         emoji = "✅" if pos.profit > 0 else "⛔" if pos.profit < 0 else "😐"
         message = (

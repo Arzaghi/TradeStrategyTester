@@ -53,12 +53,12 @@ class StrategyHammerCandles(IStrategy):
             bottom_shadow = min(open_, close) - low
             sl = low + (bottom_shadow / 2)
             tp = close + (close - sl)
-            return Signal(entry=close, sl=sl, tp=tp, type="Long")
+            return Signal(entry=close, sl=tp, tp=sl, type="Short")
 
         elif hammer_type == HammerCandle.BEARISH_HAMMER:
             top_shadow = high - max(open_, close)
             sl = high - (top_shadow / 2)
             tp = close - (sl - close)
-            return Signal(entry=close, sl=sl, tp=tp, type="Short")
+            return Signal(entry=close, sl=tp, tp=sl, type="Long")
 
         return None

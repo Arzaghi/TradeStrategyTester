@@ -11,20 +11,20 @@ class TestStrategyHammerCandles(unittest.TestCase):
         dummy = [1, "0", "0", "0", "0"]
         result = self.strategy.generate_signal([candle, dummy])
         self.assertIsInstance(result, Signal)
-        self.assertEqual(result.type, "Long")
+        self.assertEqual(result.type, "Short")
         self.assertEqual(result.entry, 110.0)
-        self.assertEqual(result.sl, 90.0)
-        self.assertEqual(result.tp, 130.0)
+        self.assertEqual(result.tp, 90.0)
+        self.assertEqual(result.sl, 130.0)
 
     def test_bearish_hammer(self):
         candle = [0, "100", "120", "89", "90"]
         dummy = [1, "0", "0", "0", "0"]
         result = self.strategy.generate_signal([candle, dummy])
         self.assertIsInstance(result, Signal)
-        self.assertEqual(result.type, "Short")
+        self.assertEqual(result.type, "Long")
         self.assertEqual(result.entry, 90.0)
-        self.assertEqual(result.sl, 110)
-        self.assertEqual(result.tp, 70)
+        self.assertEqual(result.tp, 110)
+        self.assertEqual(result.sl, 70)
 
     def test_non_hammer_green(self):
         candle = [0, "100", "101", "99", "102"]
