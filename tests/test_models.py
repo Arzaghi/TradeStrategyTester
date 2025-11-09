@@ -1,5 +1,6 @@
 import unittest
-from models import Candle, TrendMetrics, Signal, Position
+from models import Signal, Position
+from charts.chart_interface import Candle, TrendMetrics
 
 class TestModels(unittest.TestCase):
     def _sample_candle(self, timestamp=1630000000000, open_p=100.0, close_p=102.0):

@@ -1,21 +1,56 @@
 import statistics
+import pandas as pd
+import pandas_ta as ta
+from dataclasses import dataclass
 from enum import Enum, auto
 from abc import ABC, abstractmethod
 from typing import List
-from models import Candle, TrendMetrics
-import pandas as pd
-import pandas_ta as ta
+
+@dataclass
+class TrendMetrics:
+    atr: float
+    adx: float
+    plus_di: float
+    minus_di: float
+
+@dataclass
+class Candle:
+    timestamp: int                     # Open time (Unix ms)
+    open: float                        # Open price
+    high: float                        # High price
+    low: float                         # Low price
+    close: float                       # Close price
+    volume: float                      # Base asset volume
+    close_time: int                    # Close time (Unix ms)
+    quote_volume: float                # Quote asset volume
+    trade_count: int                   # Number of trades
+    taker_buy_base_volume: float       # Taker buy base asset volume
+    taker_buy_quote_volume: float      # Taker buy quote asset volume
+
+    def __eq__(self, other):
+        # Used for comparison in tests
+        return isinstance(other, Candle) and all(
+            getattr(self, attr) == getattr(other, attr) 
+            for attr in ['timestamp', 'open', 'close'] # Compare key attributes
+        )
 
 class Timeframe(Enum):
-    MINUTE_1    = auto()
-    MINUTE_5    = auto()
-    MINUTE_10   = auto()
-    MINUTE_15   = auto()
-    MINUTE_30   = auto()
-    HOURS_1     = auto()
-    HOURS_4     = auto()
-    DAY_1       = auto()
-    WEEK_1      = auto()
+    MINUTE_1    = "1m"
+    MINUTE_3    = "3m"
+    MINUTE_5    = "5m"
+    MINUTE_10   = "10m"
+    MINUTE_15   = "15m"
+    MINUTE_30   = "30m"
+    HOURS_1     = "1h"
+    HOURS_2     = "2h"
+    HOURS_4     = "4h"
+    HOURS_6     = "6h"
+    HOURS_8     = "8h"
+    HOURS_12    = "12h"
+    DAY_1       = "1d"
+    DAY_3       = "3d"
+    WEEK_1      = "1w"
+    MONTH_1     = "1M"
 
 class TrendDirection(Enum):
     STRONG_UPTREND = "strong_uptrend"

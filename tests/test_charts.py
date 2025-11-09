@@ -2,12 +2,9 @@ import unittest
 import pandas as pd
 import numpy as np
 from unittest.mock import patch, MagicMock
-from charts.chart_interface import IChart, Timeframe
+from charts.chart_interface import IChart, Timeframe, Candle, TrendMetrics
 from charts.binance_chart import BinanceChart
-from models import Candle, TrendMetrics
 from datetime import datetime
-
-
 
 class MockChart(IChart):
     def __init__(self, symbol: str, timeframe: Timeframe, raw_data: list):
@@ -84,9 +81,8 @@ class TestBinanceChart(unittest.TestCase):
         )
 
     def test_invalid_timeframe_raises(self):
-        chart = BinanceChart("ETHUSDT", Timeframe.MINUTE_10)
         with self.assertRaises(ValueError):
-            chart._get_recent_raw_ohlcv(5)
+            BinanceChart("ETHUSDT", Timeframe.MINUTE_10)
 
     def test_02_get_raw_ohlcv_interval_mapping_and_delegation(self):
         n = 7
@@ -98,14 +94,6 @@ class TestBinanceChart(unittest.TestCase):
         self.chart._binance_api.get_candles.assert_called_once_with(
             symbol="ETHUSDT", interval="15m", limit=n
         )
-
-    def test_03_invalid_timeframe_raises(self):
-        """Tests that a non-mapped Timeframe correctly raises a ValueError."""
-        # Create a new chart instance with the known unsupported timeframe (MINUTE_10)
-        unsupported_chart = BinanceChart("ETHUSDT", Timeframe.MINUTE_10)
-        
-        with self.assertRaises(ValueError):
-            unsupported_chart._get_recent_raw_ohlcv(5)
 
     def test_04_get_recent_candles_data_transformation(self):
         """Tests conversion from raw data (strings) to Candle objects (int/float)."""

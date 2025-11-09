@@ -1,4 +1,6 @@
 from enum import Enum
+from typing import List
+from charts.chart_interface import Candle
 from models import Signal
 from strategies.strategy_interface import IStrategy
 
@@ -43,11 +45,11 @@ class StrategyHammerCandles(IStrategy):
 
         return HammerCandle.NON_HAMMER
 
-    def generate_signal(self, candles):
+    def generate_signal(self, candles: List[Candle]):
         if len(candles) < self.REQUIRED_CANDLES:
             return None
 
-        open_, high, low, close = map(float, candles[0][1:5])
+        open_, high, low, close = candles[0].open, candles[0].high, candles[0].low, candles[0].close
         hammer_type = self._candle_hammer_type(open_, high, low, close)
         if hammer_type == HammerCandle.BULLISH_HAMMER:
             bottom_shadow = min(open_, close) - low

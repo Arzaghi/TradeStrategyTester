@@ -18,5 +18,5 @@ class TelegramNotifier:
             response.raise_for_status()
             return True
         except Exception as e:
-            print(f"[TelegramNotifier] Failed to send message: {e}")
+            print(f"[TelegramNotifier] Failed to send message to telegram:\n{text}\n")
             return False

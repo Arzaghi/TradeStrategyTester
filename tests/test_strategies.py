@@ -1,54 +1,52 @@
+from dataclasses import dataclass
+from typing import Optional
 import unittest
-from strategies.strategy_hammer_candles import StrategyHammerCandles, HammerCandle
+from strategies.strategy_hammer_candles import StrategyHammerCandles, HammerCandle, Candle
 from models import Signal
+
+@dataclass
+class Expected:
+    type:   str
+    entry:  float
+    tp:     float
+    sl:     float
 
 class TestStrategyHammerCandles(unittest.TestCase):
     def setUp(self):
         self.strategy = StrategyHammerCandles()
 
-    def test_bullish_hammer(self):
-        candle = [0, "100", "111", "80", "110"]  # open, high, low, close
-        dummy = [1, "0", "0", "0", "0"]
-        result = self.strategy.generate_signal([candle, dummy])
-        self.assertIsInstance(result, Signal)
-        self.assertEqual(result.type, "Short")
-        self.assertEqual(result.entry, 110.0)
-        self.assertEqual(result.tp, 90.0)
-        self.assertEqual(result.sl, 130.0)
+    def _assert_signal(self, result, expected: Optional[Expected]):
+        if expected is None:
+            self.assertIsNone(result)
+            return
+        self.assertIsNotNone(result)
+        self.assertEqual(result.type, expected.type)
+        self.assertEqual(result.entry, expected.entry)
+        self.assertEqual(result.tp, expected.tp)
+        self.assertEqual(result.sl, expected.sl)
 
-    def test_bearish_hammer(self):
-        candle = [0, "100", "120", "89", "90"]
-        dummy = [1, "0", "0", "0", "0"]
-        result = self.strategy.generate_signal([candle, dummy])
-        self.assertIsInstance(result, Signal)
-        self.assertEqual(result.type, "Long")
-        self.assertEqual(result.entry, 90.0)
-        self.assertEqual(result.tp, 110)
-        self.assertEqual(result.sl, 70)
-
-    def test_non_hammer_green(self):
-        candle = [0, "100", "101", "99", "102"]
-        dummy = [1, "0", "0", "0", "0"]
-        result = self.strategy.generate_signal([candle, dummy])
-        self.assertIsNone(result)
-
-    def test_non_hammer_red(self):
-        candle = [0, "102", "103", "101", "100"]
-        dummy = [1, "0", "0", "0", "0"]
-        result = self.strategy.generate_signal([candle, dummy])
-        self.assertIsNone(result)
-
-    def test_zero_body_size(self):
-        candle = [0, "100", "105", "95", "100"]
-        dummy = [1, "0", "0", "0", "0"]
-        result = self.strategy.generate_signal([candle, dummy])
-        self.assertIsNone(result)
+    def test_hammer_scenarios(self):
+        dummy_candle = Candle(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        scenarios = [
+            { "candles": [Candle(0, 100, 111, 80, 110, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": Expected(type="Short", entry=110.0, tp=90.0, sl=130.0) },
+            { "candles": [Candle(0, 100, 120, 89, 90, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": Expected(type="Long", entry=90.0, tp=110.0, sl=70.0) },
+            { "candles": [Candle(0, 100, 101, 99, 102, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": None },
+            { "candles": [Candle(0, 102, 103, 101, 100, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": None },
+            { "candles": [Candle(0, 100, 105, 95, 100, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": None },
+            { "candles": [Candle(0, 100, 105, 95, 100, 0, 0, 0, 0, 0, 0)], "expected": None }, # insufficient_candles: 1 candle 
+            { "candles": [], "expected": None },  # insufficient_candles: 0 candle
+        ]
+        
+        for scenario in scenarios:
+            result = self.strategy.generate_signal(scenario["candles"])
+            self._assert_signal(result, scenario["expected"])
 
     def test_insufficient_candles(self):
-        result = self.strategy.generate_signal([])  # 0 candles
-        self.assertIsNone(result)
-        result = self.strategy.generate_signal([[0, "100", "105", "90", "104"]])  # 1 candle
-        self.assertIsNone(result)
+        # 0 candles
+        self.assertIsNone(self.strategy.generate_signal([]))
+        # 1 candle
+        single = Candle(0, 100, 105, 95, 150, 0, 0, 0, 0, 0, 0)
+        self.assertIsNone(self.strategy.generate_signal([single]))
 
     def test_candle_hammer_type_direct(self):
         self.assertEqual(

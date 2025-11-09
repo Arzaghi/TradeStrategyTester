@@ -1,14 +1,14 @@
 import time
+from typing import List
 from models import Signal, Position
 from datetime import datetime, timedelta, timezone
 from strategies.strategy_interface import IStrategy
 from notifiers.notifier_interface import INotifier
+from charts.chart_interface import IChart, Timeframe, Candle
 
-class CoinWatcher:
-    def __init__(self, symbol: str, interval: str, api, strategy: IStrategy, notifier: INotifier):
-        self.symbol = symbol
-        self.interval = interval
-        self.api = api
+class ChartAnalyzer:
+    def __init__(self, chart: IChart, strategy: IStrategy, notifier: INotifier):
+        self.chart = chart
         self.strategy = strategy
         self.notifier = notifier
         self.last_processed_candle_time = None
@@ -18,8 +18,8 @@ class CoinWatcher:
             if not self._is_new_candle_due():
                 return None
 
-            candles = self.api.get_candles(self.symbol, self.interval, limit=self.strategy.REQUIRED_CANDLES)
-            current_candle_time = candles[-1][0]
+            candles: List[Candle] = self.chart.get_recent_candles(n=self.strategy.REQUIRED_CANDLES)
+            current_candle_time = candles[-1].timestamp
             if self.last_processed_candle_time == current_candle_time:
                 return None
 
@@ -31,8 +31,8 @@ class CoinWatcher:
             self.send_alert(signal)
 
             position = Position(
-                symbol=self.symbol,
-                interval=self.interval,
+                symbol=self.chart.symbol,
+                interval=self.chart.timeframe,
                 candle_time=current_candle_time,
                 open_time=datetime.fromtimestamp(current_candle_time / 1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
                 entry=signal.entry,
@@ -47,11 +47,12 @@ class CoinWatcher:
             return position
 
         except Exception as e:
-            print(f"[{self.symbol} {self.interval}] Error: {e}")
+            print(f"[{self.chart.symbol} {self.chart.timeframe}] Error: {e}")
             return None
 
-    def get_next_candle_time(last_candle_ms: int, interval: str) -> datetime:
+    def get_next_candle_time(last_candle_ms: int, timeframe: Timeframe) -> datetime:
         last_dt = datetime.fromtimestamp(last_candle_ms / 1000)
+        interval = timeframe.value
         unit = interval[-1]
         value = int(interval[:-1])
 
@@ -90,7 +91,7 @@ class CoinWatcher:
             return True  # First run
 
         now_dt = datetime.fromtimestamp(time.time())
-        next_candle_dt = CoinWatcher.get_next_candle_time(self.last_processed_candle_time, self.interval)
+        next_candle_dt = ChartAnalyzer.get_next_candle_time(self.last_processed_candle_time, self.chart.timeframe)
         return now_dt >= next_candle_dt
 
     def send_alert(self, signal: Signal):
@@ -98,7 +99,7 @@ class CoinWatcher:
             return
         emoji = "🟢" if signal.type == "Long" else "🔴"
         message = (
-            f"{emoji} *{signal.type}* | *{self.symbol}* | *{self.interval}*\n"
+            f"{emoji} *{signal.type}* | *{self.chart.symbol}* | *{self.chart.timeframe.value}*\n"
             f"*Entry:* `{signal.entry:.4f}`\n"
             f"*Stop Loss:* `{signal.sl:.4f}`"
         )
