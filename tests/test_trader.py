@@ -1,7 +1,7 @@
 import unittest
+import time
 from trader import TraderBot
 from models import Position
-import time
 
 class MockAPI:
     def __init__(self):

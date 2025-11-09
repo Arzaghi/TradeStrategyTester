@@ -3,17 +3,15 @@ from typing import List
 from models import Signal, Position
 from datetime import datetime, timedelta, timezone
 from strategies.strategy_interface import IStrategy
-from notifiers.notifier_interface import INotifier
 from charts.chart_interface import IChart, Timeframe, Candle
 
 class ChartAnalyzer:
-    def __init__(self, chart: IChart, strategy: IStrategy, notifier: INotifier):
+    def __init__(self, chart: IChart, strategy: IStrategy):
         self.chart = chart
         self.strategy = strategy
-        self.notifier = notifier
         self.last_processed_candle_time = None
 
-    def watch(self) -> Position | None:
+    def analyze(self) -> Position | None:
         try:
             if not self._is_new_candle_due():
                 return None
@@ -24,11 +22,9 @@ class ChartAnalyzer:
                 return None
 
             self.last_processed_candle_time = current_candle_time
-            signal = self.strategy.generate_signal(candles)
+            signal : Signal = self.strategy.generate_signal(candles)
             if not signal:
                 return None
-
-            self.send_alert(signal)
 
             position = Position(
                 symbol=self.chart.symbol,
@@ -65,7 +61,7 @@ class ChartAnalyzer:
             next_dt = last_dt.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=next_hour, minutes=next_minute)
             return next_dt
 
-        elif unit == "h":
+        if unit == "h":
             # Round to next multiple of `value` hours
             next_hour = ((last_dt.hour // value) + 1) * value
             next_dt = last_dt.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=next_hour)
@@ -73,18 +69,17 @@ class ChartAnalyzer:
                 next_dt = datetime.combine(last_dt.date() + timedelta(days=1), datetime.min.time())
             return next_dt
 
-        elif unit == "d":
+        if unit == "d":
             return datetime.combine(last_dt.date() + timedelta(days=value), datetime.min.time())
 
-        elif unit == "w":
+        if unit == "w":
             days_until_next_monday = (7 - last_dt.weekday()) % 7
             if days_until_next_monday == 0:
                 days_until_next_monday = 7  # If already Monday, go to next Monday
             next_monday = last_dt.date() + timedelta(days=days_until_next_monday)
             return datetime.combine(next_monday, datetime.min.time())
 
-        else:
-            raise ValueError(f"Unsupported interval format: {interval}")
+        raise ValueError(f"Unsupported interval format: {interval}")
 
     def _is_new_candle_due(self):
         if not self.last_processed_candle_time:
@@ -93,14 +88,3 @@ class ChartAnalyzer:
         now_dt = datetime.fromtimestamp(time.time())
         next_candle_dt = ChartAnalyzer.get_next_candle_time(self.last_processed_candle_time, self.chart.timeframe)
         return now_dt >= next_candle_dt
-
-    def send_alert(self, signal: Signal):
-        if self.notifier is None:
-            return
-        emoji = "🟢" if signal.type == "Long" else "🔴"
-        message = (
-            f"{emoji} *{signal.type}* | *{self.chart.symbol}* | *{self.chart.timeframe.value}*\n"
-            f"*Entry:* `{signal.entry:.4f}`\n"
-            f"*Stop Loss:* `{signal.sl:.4f}`"
-        )
-        self.notifier.send_message(message)

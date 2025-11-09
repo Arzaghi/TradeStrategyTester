@@ -21,7 +21,7 @@ def main():
     positions_history_logger = PositionsHistoryLogger("/HDD/positions_history.csv")
     current_positions_logger = CurrentPositionsLogger("/HDD/current_positions.csv")
     strategy = StrategyHammerCandles()
-    analyzers = [ChartAnalyzer(BinanceChart(symbol, timeframe), strategy, None) for symbol in symbols for timeframe in timeframes]
+    analyzers = [ChartAnalyzer(BinanceChart(symbol, timeframe), strategy) for symbol in symbols for timeframe in timeframes]
     exchange = VirtualExchange(api, telegram_notifier, positions_history_logger=positions_history_logger, current_positions_logger=current_positions_logger)
 
     hello_message = (
@@ -37,7 +37,7 @@ def main():
     try:
         while True:
             for analyzer in analyzers:
-                position = analyzer.watch()
+                position = analyzer.analyze()
                 exchange.open_position(position)
             exchange.tick()
             time.sleep(1)
