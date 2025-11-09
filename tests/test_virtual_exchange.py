@@ -146,7 +146,7 @@ class TestVirtualExchange(unittest.TestCase):
             "Total Profit: `0`\n"
         )
 
-        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected)
 
         self.assertEqual(pos.profit, -1)
         
@@ -244,7 +244,7 @@ class TestVirtualExchange(unittest.TestCase):
             "Total Profit: `1`\n"
         )
 
-        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected)
         expected_current_positions_logs = (
             "id,type,symbol,interval,open_time,entry,initial_sl,current_sl,next_tp,current_profit,current_price\n"
         )
@@ -272,7 +272,7 @@ class TestVirtualExchange(unittest.TestCase):
             "Total Profit: `0`\n"
         )
 
-        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected)
 
         self.assertEqual(pos.profit, -1)
 
@@ -319,7 +319,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `0`\n"
             "Total Profit: `1`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected)
 
     def test_long_sl_without_tp_hit(self):
         pos = create_position(entry=100.0, sl=90.0, tp=110.0, type="Long")
@@ -342,7 +342,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `0`\n"
             "Total Profit: `0`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_open, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_open)
         self.assertEqual(pos.profit, -1)
 
         # Price drops below SL immediately
@@ -375,7 +375,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `1`\n"
             "Total Profit: `-1`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_close)
 
     def test_short_tp2_hit(self):
         pos = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
@@ -398,7 +398,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `0`\n"
             "Total Profit: `0`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_open, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_open)
         self.assertEqual(pos.profit, -1)
 
         self.api.get_current_price.return_value = 90.0
@@ -442,7 +442,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `0`\n"
             "Total Profit: `1`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_close)
 
     def test_short_sl_on_entry_hit(self):
         pos = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
@@ -465,7 +465,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `0`\n"
             "Total Profit: `0`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_open, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_open)
         self.assertEqual(pos.profit, -1)
 
         self.api.get_current_price.return_value = 90.0
@@ -497,7 +497,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `0`\n"
             "Total Profit: `1`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_close)
 
     def test_sl_without_tp_hit_short(self):
         pos = create_position(entry=100.0, sl=110.0, tp=90.0, type="Short")
@@ -520,7 +520,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `0`\n"
             "Total Profit: `0`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_open, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_open)
         self.assertEqual(pos.profit, -1)
 
         self.api.get_current_price.return_value = 111.0
@@ -547,7 +547,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `1`\n"
             "Total Profit: `-1`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_close)
 
     def test_tick_handles_api_exception_gracefully(self):
         pos = create_position()
@@ -672,7 +672,7 @@ class TestVirtualExchange(unittest.TestCase):
             "Total Profit: `1`\n"
         )
 
-        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected)
 
     def test_mixed_long_and_short_positions_with_simultaneous_openings(self):
         # Long position: 2 TP hits, then SL
@@ -760,7 +760,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `1`\n"
             "Total Profit: `1`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected_close, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected_close)
 
     def test_realistic_example(self):
         long_pos = create_position(entry=100.0, sl=90.0, tp=110.0, type="Long", interval="30m")
@@ -841,7 +841,7 @@ class TestVirtualExchange(unittest.TestCase):
             "SL Hits: `1`\n"
             "Total Profit: `1`\n"
         )
-        self.exchange.notifier.send_message.assert_called_with(expected, parse_mode="Markdown")
+        self.exchange.notifier.send_message.assert_called_with(expected)
 
         expected_positions_history_logs = (
             "type,symbol,interval,entry,initial_sl,initial_tp,exit_price,open_time,close_time,duration,profit\n"

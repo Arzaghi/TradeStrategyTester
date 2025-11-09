@@ -125,7 +125,7 @@ class VirtualExchange:
         )
         try:
             if self.notifier:
-                self.notifier.send_message(message, parse_mode="Markdown")
+                self.notifier.send_message(message)
         except Exception as e:
             print(f"[VirtualExchange] Failed to send open notification: {e}")
 
@@ -154,6 +154,6 @@ class VirtualExchange:
         )
         try:
             if self.notifier:
-                self.notifier.send_message(message, parse_mode="Markdown")
+                self.notifier.send_message(message)
         except Exception as e:
             print(f"[VirtualExchange] Failed to send close notification: {e}")
