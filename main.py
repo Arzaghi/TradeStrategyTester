@@ -8,17 +8,15 @@ from utils import get_git_commit_hash
 from notifiers.telegram_notifier import TelegramNotifier
 from coin_watcher import CoinWatcher
 from virtual_exchange import VirtualExchange
+from charts.binance_chart import BinanceChart, Timeframe
 
 def main():
     logging.basicConfig(level=logging.INFO)
 
-    current_version = get_git_commit_hash()
     symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "XRPUSDT", "TRXUSDT", "DOGEUSDT", "LINKUSDT", "SUIUSDT", "PAXGUSDT"]
     intervals = ["15m", "30m", "1h", "4h", "1d", "1w"]
 
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
-    telegram_notifier = TelegramNotifier(bot_token, channel_id)
+    telegram_notifier = TelegramNotifier(os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHANNEL_ID"))
     api = BinanceAPI()
     positions_history_logger = PositionsHistoryLogger("/HDD/positions_history.csv")
     current_positions_logger = CurrentPositionsLogger("/HDD/current_positions.csv")
@@ -27,7 +25,7 @@ def main():
     exchange = VirtualExchange(api, telegram_notifier, positions_history_logger=positions_history_logger, current_positions_logger=current_positions_logger)
 
     hello_message = (
-        f"Started Version On Server: {current_version}\n"
+        f"Started Version On Server: {get_git_commit_hash()}\n"
         f"Number of Watchers: {len(watchers)}\n"
         f"Watching Coins: {symbols}\n"
         f"Watching TimeFrames: {intervals}\n"
