@@ -1,8 +1,9 @@
+from datetime import datetime
 import statistics
 import pandas as pd
 import pandas_ta as ta
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -71,15 +72,23 @@ class IChart(ABC):
         return self._timeframe
     
     @abstractmethod
+    def get_current_candle_time(self) -> datetime:
+        pass
+
+    @abstractmethod
+    def have_new_data(self, now: datetime = None) -> bool:
+        pass
+
+    @abstractmethod
     def get_current_price(self) -> float:
         pass
 
     @abstractmethod
-    def _get_recent_raw_ohlcv(self, n: int) -> List[list]:
+    def get_recent_raw_ohlcv(self, n: int) -> List[list]:
         pass
 
     def get_recent_candles(self, n: int) -> List[Candle]:
-            raw_candles = self._get_recent_raw_ohlcv(n)
+            raw_candles = self.get_recent_raw_ohlcv(n)
             return [
                 Candle(
                     timestamp=int(ts),
@@ -106,7 +115,7 @@ class IChart(ABC):
         which often require the prior close or delta.
         """
         # Fetch raw data list of lists
-        raw_candles = self._get_recent_raw_ohlcv(period + 1) 
+        raw_candles = self.get_recent_raw_ohlcv(period + 1) 
         
         if not raw_candles:
             return pd.DataFrame()

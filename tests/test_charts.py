@@ -3,19 +3,25 @@ import pandas as pd
 import numpy as np
 from unittest.mock import patch, MagicMock
 from charts.chart_interface import IChart, Timeframe, Candle, TrendMetrics
-from charts.binance_chart import BinanceChart
-from datetime import datetime
+from charts.binance_chart import BinanceAPI, BinanceChart
+from datetime import datetime, timedelta, timezone
 
 class MockChart(IChart):
     def __init__(self, symbol: str, timeframe: Timeframe, raw_data: list):
         super().__init__(symbol, timeframe)
         self._raw_data = raw_data
 
+    def get_current_candle_time(self):
+        return datetime(1970, 1, 1, tzinfo=timezone.utc)
+    
     def get_current_price(self) -> float:
         return 123.45
 
-    def _get_recent_raw_ohlcv(self, n: int) -> list:
+    def get_recent_raw_ohlcv(self, n: int) -> list:
         return self._raw_data[:n]
+
+    def have_new_data(self, now = None):
+        return True
 
 class TestIChart(unittest.TestCase):
     def setUp(self):
@@ -44,11 +50,191 @@ class TestIChart(unittest.TestCase):
         df = self.chart.get_recent_dataframes(5)
         self.assertTrue(pd.api.types.is_datetime64_any_dtype(df.index))
 
+class TestBinanceAPI(unittest.TestCase):
+    @patch("charts.binance_chart.requests.get")
+    def test_get_candles(self, mock_get):
+        mock_get.return_value.json.return_value = [["dummy"]]
+        mock_get.return_value.raise_for_status = lambda: None
+        api = BinanceAPI()
+        candles = api.get_candles("BTCUSDT", "1h")
+        self.assertEqual(candles, [["dummy"]])
+
+    @patch("charts.binance_chart.requests.get")
+    def test_get_current_price(self, mock_get):
+        mock_get.return_value.json.return_value = {"price": "123.45"}
+        mock_get.return_value.raise_for_status = lambda: None
+        api = BinanceAPI()
+        price = api.get_current_price("BTCUSDT")
+        self.assertEqual(price, 123.45)
+
+class TestBinanceChartCaching(unittest.TestCase):
+    def setUp(self):
+        BinanceChart._shared_ohlcv_cache.clear()
+        self.symbol = "BTCUSDT"
+        self.timeframe = Timeframe.MINUTE_1
+        self.chart = BinanceChart(self.symbol, self.timeframe)
+
+    def test_is_new_candle_due(self):
+        scenarios = [
+            {"timeframe": Timeframe.MINUTE_5,   "last": datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 22, 4, 59, tzinfo=timezone.utc), False),  (datetime(2025, 11, 2, 22, 5, 0, tzinfo=timezone.utc), True)]    },
+            {"timeframe": Timeframe.MINUTE_5,   "last": datetime(2025, 11, 2, 22, 2, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 22, 2, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 22, 4, 59, tzinfo=timezone.utc), False),  (datetime(2025, 11, 2, 22, 5, 0, tzinfo=timezone.utc), True)]    },
+            {"timeframe": Timeframe.MINUTE_15,  "last": datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 22, 14, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 22, 15, 0, tzinfo=timezone.utc), True)]   },
+            {"timeframe": Timeframe.MINUTE_15,  "last": datetime(2025, 11, 2, 22, 5, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 22, 5, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 22, 14, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 22, 15, 0, tzinfo=timezone.utc), True)]   },
+            {"timeframe": Timeframe.MINUTE_30,  "last": datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 22, 29, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 22, 30, 0, tzinfo=timezone.utc), True)]   },
+            {"timeframe": Timeframe.MINUTE_30,  "last": datetime(2025, 11, 2, 22, 10, 0, tzinfo=timezone.utc),   "checks": [(datetime(2025, 11, 2, 22, 10, 0, tzinfo=timezone.utc), False),   (datetime(2025, 11, 2, 22, 29, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 22, 30, 0, tzinfo=timezone.utc), True)]   },
+            {"timeframe": Timeframe.HOURS_1,    "last": datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 22, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 23, 0, 0, tzinfo=timezone.utc), True)]    },
+            {"timeframe": Timeframe.HOURS_1,    "last": datetime(2025, 11, 2, 22, 5, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 22, 5, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 22, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 23, 0, 0, tzinfo=timezone.utc), True)]    },
+            {"timeframe": Timeframe.HOURS_2,    "last": datetime(2025, 11, 2, 20, 0, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 20, 0, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 21, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc), True)]    },
+            {"timeframe": Timeframe.HOURS_2,    "last": datetime(2025, 11, 2, 19, 30, 0, tzinfo=timezone.utc),   "checks": [(datetime(2025, 11, 2, 19, 30, 0, tzinfo=timezone.utc), False),   (datetime(2025, 11, 2, 19, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 20, 0, 0, tzinfo=timezone.utc), True)]    },
+            {"timeframe": Timeframe.HOURS_4,    "last": datetime(2025, 11, 2, 20, 0, 0, tzinfo=timezone.utc),    "checks": [(datetime(2025, 11, 2, 20, 0, 0, tzinfo=timezone.utc), False),    (datetime(2025, 11, 2, 23, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 3, 0, 0, 0, tzinfo=timezone.utc), True)]     },
+            {"timeframe": Timeframe.HOURS_4,    "last": datetime(2025, 11, 2, 16, 50, 50, tzinfo=timezone.utc),  "checks": [(datetime(2025, 11, 2, 16, 50, 50, tzinfo=timezone.utc), False),  (datetime(2025, 11, 2, 19, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 2, 20, 0, 0, tzinfo=timezone.utc), True)]    },
+            {"timeframe": Timeframe.DAY_1,      "last": datetime(2025, 11, 2, 0, 0, 0, tzinfo=timezone.utc),     "checks": [(datetime(2025, 11, 2, 0, 0, 0, tzinfo=timezone.utc), False),     (datetime(2025, 11, 2, 23, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 3, 0, 0, 0, tzinfo=timezone.utc), True)]     },
+            {"timeframe": Timeframe.DAY_1,      "last": datetime(2025, 11, 2, 2, 15, 50, tzinfo=timezone.utc),   "checks": [(datetime(2025, 11, 2, 2, 15, 50, tzinfo=timezone.utc), False),   (datetime(2025, 11, 2, 23, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 3, 0, 0, 0, tzinfo=timezone.utc), True)]     },
+            {"timeframe": Timeframe.WEEK_1,     "last": datetime(2025, 11, 3, 0, 0, 0, tzinfo=timezone.utc),     "checks": [(datetime(2025, 11, 3, 0, 0, 0, tzinfo=timezone.utc), False),     (datetime(2025, 11, 9, 23, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 10, 0, 0, 0, tzinfo=timezone.utc), True)]    },
+            {"timeframe": Timeframe.WEEK_1,     "last": datetime(2025, 11, 6, 15, 50, 40, tzinfo=timezone.utc),  "checks": [(datetime(2025, 11, 6, 15, 50, 40, tzinfo=timezone.utc), False),  (datetime(2025, 11, 9, 23, 59, 59, tzinfo=timezone.utc), False), (datetime(2025, 11, 10, 0, 0, 0, tzinfo=timezone.utc), True)]    },
+        ]
+
+        for scenario in scenarios:
+            chart = BinanceChart("BTCUSDT", scenario["timeframe"])
+            chart.last_seen_candle_dt = scenario["last"]
+
+            for now_dt, expected in scenario["checks"]:
+                self.assertEqual(chart.have_new_data(now_dt), expected)
+
+    def test_get_next_candle_time(self):
+        cases = [
+            (Timeframe.MINUTE_5,  datetime(2025,11,2,20,0,0),  datetime(2025,11,2,20,5,0, tzinfo=timezone.utc)),
+            (Timeframe.MINUTE_5,  datetime(2025,11,2,20,2,0),  datetime(2025,11,2,20,5,0, tzinfo=timezone.utc)),
+            (Timeframe.MINUTE_15, datetime(2025,11,2,20,0,0),  datetime(2025,11,2,20,15,0, tzinfo=timezone.utc)),
+            (Timeframe.MINUTE_15, datetime(2025,11,2,20,1,0),  datetime(2025,11,2,20,15,0, tzinfo=timezone.utc)),
+            (Timeframe.MINUTE_30, datetime(2025,11,2,20,0,0),  datetime(2025,11,2,20,30,0, tzinfo=timezone.utc)),
+            (Timeframe.MINUTE_30, datetime(2025,11,2,20,10,0), datetime(2025,11,2,20,30,0, tzinfo=timezone.utc)),
+            (Timeframe.HOURS_1,   datetime(2025,11,2,20,0,0),  datetime(2025,11,2,21,0,0, tzinfo=timezone.utc)),
+            (Timeframe.HOURS_1,   datetime(2025,11,2,20,45,0), datetime(2025,11,2,21,0,0, tzinfo=timezone.utc)),
+            (Timeframe.HOURS_2,   datetime(2025,11,2,20,0,0),  datetime(2025,11,2,22,0,0, tzinfo=timezone.utc)),
+            (Timeframe.HOURS_2,   datetime(2025,11,2,21,15,0), datetime(2025,11,2,22,0,0, tzinfo=timezone.utc)),
+            (Timeframe.HOURS_4,   datetime(2025,11,2,20,0,0),  datetime(2025,11,3,0,0,0, tzinfo=timezone.utc)),
+            (Timeframe.HOURS_4,   datetime(2025,11,2,21,30,0), datetime(2025,11,3,0,0,0, tzinfo=timezone.utc)),
+            (Timeframe.DAY_1,     datetime(2025,11,2,23,59,59), datetime(2025,11,3,0,0,0, tzinfo=timezone.utc)),
+            (Timeframe.WEEK_1,    datetime(2025,11,2,12,0,0),   datetime(2025,11,3,0,0,0, tzinfo=timezone.utc)),
+            (Timeframe.WEEK_1,    datetime(2025,11,3,0,0,0),    datetime(2025,11,10,0,0,0, tzinfo=timezone.utc)),
+        ]
+
+        for tf, last_dt, expected in cases:
+            chart = BinanceChart(symbol="BTCUSDT", timeframe=tf)
+            chart.last_seen_candle_dt = last_dt
+            result = chart.get_next_candle_time()
+            self.assertEqual(result, expected)
+
+    @patch("charts.binance_chart.BinanceAPI.get_candles")
+    def test_first_call_hits_api_and_populates_cache(self, mock_get_candles):
+        mock_data = [[datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc).timestamp() * 1000, 1, 2, 3, 4, 5]]
+        mock_get_candles.return_value = mock_data
+
+        chart = BinanceChart("BTCUSDT", Timeframe.MINUTE_5)
+        result = chart.get_recent_raw_ohlcv(10)
+
+        mock_get_candles.assert_called_once()
+        self.assertEqual(result, mock_data)
+        self.assertEqual(chart.get_current_candle_time(), datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc))
+        self.assertIn(("BTCUSDT", Timeframe.MINUTE_5, 10), BinanceChart._shared_ohlcv_cache)        
+
+    @patch("charts.binance_chart.BinanceAPI.get_candles")
+    def test_second_call_uses_cache_if_no_new_data(self, mock_get_candles):
+        last_ts = datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc)
+        cached_data = [[last_ts.timestamp() * 1000, 1, 2, 3, 4, 5]]
+
+        chart = BinanceChart("BTCUSDT", Timeframe.MINUTE_5)
+        chart.last_seen_candle_dt = last_ts
+        BinanceChart._shared_ohlcv_cache[("BTCUSDT", Timeframe.MINUTE_5, 10)] = (last_ts, cached_data)
+
+        with patch("charts.binance_chart.datetime") as mock_datetime:
+            mock_datetime.now.return_value = datetime(2025, 11, 2, 22, 4, 59, tzinfo=timezone.utc)
+            mock_datetime.fromtimestamp.side_effect = lambda ts, tz: datetime.fromtimestamp(ts, tz)
+            result = chart.get_recent_raw_ohlcv(10)
+            mock_get_candles.assert_not_called()
+            self.assertEqual(result, cached_data)
+            self.assertEqual(chart.get_current_candle_time(), last_ts)
+
+    @patch("charts.binance_chart.BinanceAPI.get_candles")
+    def test_cache_expired_when_new_candle_due(self, mock_get_candles):
+        old_ts = datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc)
+        new_ts = datetime(2025, 11, 2, 22, 5, 0, tzinfo=timezone.utc)
+        cached_data = [[old_ts.timestamp() * 1000, 1, 2, 3, 4, 5]]
+        new_data = [[new_ts.timestamp() * 1000, 9, 8, 7, 6, 5]]
+
+        chart = BinanceChart("BTCUSDT", Timeframe.MINUTE_5)
+        chart.last_seen_candle_dt = old_ts
+        BinanceChart._shared_ohlcv_cache[("BTCUSDT", Timeframe.MINUTE_5, 10)] = (old_ts, cached_data)
+        mock_get_candles.return_value = new_data
+
+        with patch("charts.binance_chart.datetime") as mock_datetime:
+            mock_datetime.now.return_value = new_ts
+            mock_datetime.fromtimestamp.side_effect = lambda ts, tz: datetime.fromtimestamp(ts, tz)
+
+            self.assertEqual(chart.get_current_candle_time(), old_ts)
+            result = chart.get_recent_raw_ohlcv(10)
+            self.assertEqual(result, new_data)
+            mock_get_candles.assert_called_once()
+            self.assertEqual(chart.get_current_candle_time(), new_ts)
+
+    @patch("charts.binance_chart.BinanceAPI.get_candles")
+    def test_different_n_creates_separate_cache(self, mock_get_candles):    
+        data_10 = [[datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc).timestamp() * 1000, 1]]
+        data_20 = [[datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc).timestamp() * 1000, 2]]
+        mock_get_candles.side_effect = [data_10, data_20]
+
+        chart = BinanceChart("BTCUSDT", Timeframe.MINUTE_5)
+        result_10 = chart.get_recent_raw_ohlcv(10)
+        result_20 = chart.get_recent_raw_ohlcv(20)
+
+        self.assertEqual(result_10, data_10)
+        self.assertEqual(result_20, data_20)
+        self.assertEqual(mock_get_candles.call_count, 2)
+
+    @patch("charts.binance_chart.BinanceAPI.get_candles")
+    def test_different_symbol_or_timeframe_isolated_cache(self, mock_get_candles):
+        data_btc = [[datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc).timestamp() * 1000, 1]]
+        data_eth = [[datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc).timestamp() * 1000, 2]]
+        mock_get_candles.side_effect = [data_btc, data_eth]
+
+        chart_btc = BinanceChart("BTCUSDT", Timeframe.MINUTE_5)
+        chart_eth = BinanceChart("ETHUSDT", Timeframe.MINUTE_5)
+
+        result_btc = chart_btc.get_recent_raw_ohlcv(10)
+        result_eth = chart_eth.get_recent_raw_ohlcv(10)
+
+        self.assertEqual(result_btc, data_btc)
+        self.assertEqual(result_eth, data_eth)
+        self.assertEqual(mock_get_candles.call_count, 2)
+
+    @patch("charts.binance_chart.BinanceAPI.get_candles")
+    def test_shared_cache_across_instances(self, mock_get_candles):
+        # Setup mock API response
+        candle_ts = datetime(2025, 11, 2, 22, 0, 0, tzinfo=timezone.utc)
+        mock_data = [[candle_ts.timestamp() * 1000, 1, 2, 3, 4, 5]]
+        mock_get_candles.return_value = mock_data
+
+        # First chart instance
+        chart1 = BinanceChart("BTCUSDT", Timeframe.MINUTE_5)
+        chart1.have_new_data = MagicMock(return_value=False)
+        result1 = chart1.get_recent_raw_ohlcv(10) # Call the API because nothing is cached yet.
+
+        # Second chart instance with same key
+        chart2 = BinanceChart("BTCUSDT", Timeframe.MINUTE_5)
+        chart2.have_new_data = MagicMock(return_value=False)
+        result2 = chart2.get_recent_raw_ohlcv(10) # Use the cache because it is filled and no new data is available.
+
+        # Assertions
+        self.assertEqual(result1, mock_data)
+        self.assertEqual(result2, mock_data)
+        mock_get_candles.assert_called_once()  # API called only once
+
 class TestBinanceChart(unittest.TestCase):
     def _generate_mock_klines(self, symbol: str, interval: str, limit: int) -> list:
-        base_time = 1678886400000 
-        
+        base_time = 1678886400000  
         data = []
+
         for i in range(limit):
             t = base_time + (i * 60000)
             o = str(40000.0 + i)
@@ -74,7 +260,7 @@ class TestBinanceChart(unittest.TestCase):
         self.chart._binance_api.get_current_price.assert_called_once_with("ETHUSDT")
 
     def test_get_raw_ohlcv_interval_mapping(self):
-        raw = self.chart._get_recent_raw_ohlcv(10)
+        raw = self.chart.get_recent_raw_ohlcv(10)
         self.assertEqual(len(raw), 10)
         self.chart._binance_api.get_candles.assert_called_once_with(
             symbol="ETHUSDT", interval="15m", limit=10
@@ -86,7 +272,7 @@ class TestBinanceChart(unittest.TestCase):
 
     def test_02_get_raw_ohlcv_interval_mapping_and_delegation(self):
         n = 7
-        raw = self.chart._get_recent_raw_ohlcv(n)
+        raw = self.chart.get_recent_raw_ohlcv(n)
         
         self.assertEqual(len(raw), n)
         self.assertIsInstance(raw[0], list)
@@ -111,7 +297,6 @@ class TestBinanceChart(unittest.TestCase):
         self.assertIsInstance(candles[0].timestamp, int)
         self.assertIsInstance(candles[0].open, float)
         self.assertIsInstance(candles[0].trade_count, int)
-
 
     def test_05_get_recent_dataframes_structure_and_index(self):
         """Tests the DataFrame conversion (period + 1 rows, types, and index)."""
