@@ -64,8 +64,8 @@ class TestTradeAgentMulti(unittest.TestCase):
         agent.analyze()
 
         mock_generate_position.assert_has_calls([
-            unittest.mock.call(self.chart1, signal1),
-            unittest.mock.call(self.chart2, signal2)
+            unittest.mock.call(self.chart1, self.strategy1, signal1),
+            unittest.mock.call(self.chart2, self.strategy2, signal2)
         ])
         self.exchange.open_position.assert_has_calls([
             unittest.mock.call(pos1),

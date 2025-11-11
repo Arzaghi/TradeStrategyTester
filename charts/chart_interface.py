@@ -54,8 +54,8 @@ class Timeframe(Enum):
     MONTH_1     = "1M"
 
 class TrendDirection(Enum):
-    STRONG_UPTREND = "strong_uptrend"
-    STRONG_DOWNTREND = "strong_downtrend"
+    UPTREND = "uptrend"
+    DOWNTREND = "downtrend"
     NEUTRAL = "neutral"
 
 class IChart(ABC):
@@ -192,14 +192,26 @@ class IChart(ABC):
         
         # The column names are dynamically generated, so we find the last value of each
         macd_line = macd_df.iloc[-1].filter(like='MACD_').iloc[0]
-        signal_line = macd_df.iloc[-1].filter(like='MACDh_').iloc[0]
-        histogram = macd_df.iloc[-1].filter(like='MACDs_').iloc[0]
+        signal_line = macd_df.iloc[-1].filter(like='MACDs_').iloc[0]
+        histogram = macd_df.iloc[-1].filter(like='MACDh_').iloc[0]
 
         return {
             "macd": macd_line,
             "signal": signal_line,
             "histogram": histogram
         }
+    
+    def get_macd_trend(self, fast: int = 12, slow: int = 26, signal: int = 9) -> TrendDirection:
+        macd_data = self.get_macd(fast, slow, signal)
+        macd = macd_data["macd"]
+        signal = macd_data["signal"]
+
+        if macd > signal:
+            return TrendDirection.UPTREND
+        elif macd < signal:
+            return TrendDirection.DOWNTREND
+        else:
+            return TrendDirection.NEUTRAL
 
     def get_bollinger_bands(self, period: int = 20, multiplier: float = 2.0) -> dict:
         df = self.get_recent_dataframes(period)
@@ -264,8 +276,8 @@ class IChart(ABC):
 
         if data["adx"] > 25:
             if data["plus_di"] > data["minus_di"]:
-                return TrendDirection.STRONG_UPTREND
+                return TrendDirection.UPTREND
             elif data["minus_di"] > data["plus_di"]:
-                return TrendDirection.STRONG_DOWNTREND
+                return TrendDirection.DOWNTREND
 
         return TrendDirection.NEUTRAL

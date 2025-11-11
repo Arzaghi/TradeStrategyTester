@@ -2,9 +2,9 @@ import unittest
 import pandas as pd
 import numpy as np
 from unittest.mock import patch, MagicMock
-from charts.chart_interface import IChart, Timeframe, Candle, TrendMetrics
+from charts.chart_interface import IChart, Timeframe, Candle, TrendDirection, TrendMetrics
 from charts.binance_chart import BinanceAPI, BinanceChart
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 class MockChart(IChart):
     def __init__(self, symbol: str, timeframe: Timeframe, raw_data: list):
@@ -407,7 +407,8 @@ class TestBinanceChart(unittest.TestCase):
             '25814.62139000', 1762473599999, '2641767846.30582700', 5755001, '11972.54796000', '1225474173.02042840', '0'], [1762473600000, '101346.04000000', '104096.36000000', '99260.86000000', '103339.08000000', '32059.50942000', 1762559999999, '3251112979.30588400', 6335759, '16056.80582000', '1629564159.11657990', '0'], [1762560000000, '103339.09000000', '103406.22000000', '101454.00000000', '102312.94000000', '12390.77985000', 1762646399999, '1267165565.37527010', 2743819, '5862.65977000', '599611355.36714670', '0'], [1762646400000, '102312.95000000', '102337.89000000', '101620.23000000', '101894.46000000', '540.10193000', 1762732799999, '55083833.32232490', 123819, '187.90766000', '19159001.07147570', '0']]
         
         # Same as TradingView at the time this data was captured.
-        self.assertEqual(self.chart.get_macd(fast = 12, slow = 26, signal = 9), {'macd': np.float64(-2826.343130849913), 'signal': np.float64(-656.9180954584385), 'histogram': np.float64(-2169.4250353914745)})
+        self.assertEqual(self.chart.get_macd(fast = 12, slow = 26, signal = 9), {'macd': np.float64(-2826.343130849913), 'signal': np.float64(-2169.4250353914745), 'histogram': np.float64(-656.9180954584385)})
+        self.assertEqual(self.chart.get_macd_trend(fast = 12, slow = 26, signal = 9), TrendDirection.DOWNTREND)
 
     def test_bollinger_bands(self):
         self.chart._binance_api.get_candles.side_effect = None
