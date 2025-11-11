@@ -1,12 +1,13 @@
-from models import Signal, Position
+from structs.position import Position
+from structs.signal import Signal
+from agents.agent_interface import ITradeAgent
 from strategies.strategy_interface import IStrategy
 from charts.chart_interface import IChart
 
-class ChartAnalyzer:
+class TradeAgent(ITradeAgent):
     def __init__(self, chart: IChart, strategy: IStrategy):
         self.chart = chart
         self.strategy = strategy
-        self.last_processed_time = None
 
     def analyze(self) -> Position | None:
         try:

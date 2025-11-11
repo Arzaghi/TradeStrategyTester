@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from structs.position import Position
 
-class IExchange(ABC):
+class ITradeAgent(ABC):
     @abstractmethod
-    def open_position(self, pos: Position):
+    def analyze(self) -> Position | None:
         pass

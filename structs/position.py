@@ -1,14 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
-from charts.chart_interface import IChart, Timeframe
-
-@dataclass
-class Signal:
-    entry: float
-    sl: float
-    tp: float
-    type: str
-
+from charts.chart_interface import IChart
+from structs.signal import Signal
 
 @dataclass
 class Position:
@@ -64,4 +57,3 @@ class Position:
         if seconds or not parts:
             parts.append(f"{seconds}s")
         return " ".join(parts)
-

@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 import unittest
 from unittest.mock import Mock, call, patch
 from exchanges.virtual_exchange import VirtualExchange
-from models import Position, Signal
+from structs.position import Position
+from structs.signal import Signal
 from charts.chart_interface import IChart, Timeframe
 
 class DummyChart(IChart):

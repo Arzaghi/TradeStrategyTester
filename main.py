@@ -3,9 +3,9 @@ import os
 import logging
 from strategies.strategy_hammer_candles import StrategyHammerCandles
 from persistence.persistence_interface import PositionsHistoryLogger, CurrentPositionsLogger
-from utils import get_git_commit_hash
+from structs.utils import get_git_commit_hash
 from notifiers.telegram_notifier import TelegramNotifier
-from chart_analyzer import ChartAnalyzer
+from agents.trade_agent import TradeAgent
 from exchanges.virtual_exchange import VirtualExchange
 from charts.binance_chart import BinanceChart, Timeframe
 
@@ -19,7 +19,7 @@ def main():
     positions_history_logger = PositionsHistoryLogger("/HDD/positions_history.csv")
     current_positions_logger = CurrentPositionsLogger("/HDD/current_positions.csv")
     strategy = StrategyHammerCandles()
-    analyzers = [ChartAnalyzer(BinanceChart(symbol, timeframe), strategy) for symbol in symbols for timeframe in timeframes]
+    analyzers = [TradeAgent(BinanceChart(symbol, timeframe), strategy) for symbol in symbols for timeframe in timeframes]
     exchange = VirtualExchange(api, telegram_notifier, positions_history_logger=positions_history_logger, current_positions_logger=current_positions_logger)
 
     hello_message = (

@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
-from models import Signal, Position
+from structs.position import Position
+from structs.signal import Signal
 from charts.chart_interface import Candle, Timeframe, TrendMetrics
 
 class TestModels(unittest.TestCase):

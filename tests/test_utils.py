@@ -1,6 +1,6 @@
 import time
 import unittest
-from utils import get_utc_now_timestamp
+from structs.utils import get_utc_now_timestamp
 
 class TestUtils(unittest.TestCase):
     def test_current_timestamp_returns_utc_now(self):

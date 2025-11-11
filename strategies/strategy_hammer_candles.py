@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 from charts.chart_interface import IChart
-from models import Signal
+from structs.signal import Signal
 from strategies.strategy_interface import IStrategy
 
 class HammerCandle(Enum):
@@ -13,7 +13,6 @@ class HammerCandle(Enum):
     NON_HAMMER = 0
     BULLISH_HAMMER = 1
     BEARISH_HAMMER = 2
-
 
 class StrategyHammerCandles(IStrategy):
     STRATEGY_NAME = "Hammer Candle"

@@ -1,6 +1,6 @@
 from exchanges.exchange_interface import IExchange
-from models import Position
-from utils import get_utc_now_timestamp
+from structs.position import Position
+from structs.utils import get_utc_now_timestamp
 from notifiers.notifier_interface import INotifier
 from persistence.persistence_interface import IPersistence
 
