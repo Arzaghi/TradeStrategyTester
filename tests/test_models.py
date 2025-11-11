@@ -292,3 +292,148 @@ class TestPositionRowExports(unittest.TestCase):
         self.assertEqual(row["open_time"], "2023-11-14 22:13")
         self.assertEqual(row["close_time"], "2023-11-14 22:19")
         self.assertEqual(row["duration"], "00:06:00")
+
+import unittest
+from structs.position import Position
+
+class TestCalcProfit(unittest.TestCase):
+    def test_long_profit_1x(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=90.0,
+            initial_tp=120.0,
+            sl=90.0,
+            tp=120.0,
+            type="Long",
+        )
+
+        pos.exit_price = 110
+        self.assertEqual(pos.calc_profit(), 1.0)
+
+    def test_long_profit_2x(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=90.0,
+            initial_tp=120.0,
+            sl=90.0,
+            tp=120.0,
+            type="Long",
+        )
+        pos.exit_price = 120
+        self.assertEqual(pos.calc_profit(), 2.0)
+
+    def test_long_loss(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=90.0,
+            initial_tp=120.0,
+            sl=90.0,
+            tp=120.0,
+            type="Long",
+        )
+        pos.exit_price = 90
+        self.assertEqual(pos.calc_profit(), -1.0)
+
+    def test_long_breakeven(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=90.0,
+            initial_tp=120.0,
+            sl=90.0,
+            tp=120.0,
+            type="Long",
+        )
+        pos.exit_price = 100
+        self.assertEqual(pos.calc_profit(), 0.0)
+
+    def test_short_profit_1x(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=110.0,
+            initial_tp=80.0,
+            sl=110.0,
+            tp=80.0,
+            type="Short",
+        )
+        pos.exit_price = 90
+        self.assertEqual(pos.calc_profit(), 1.0)
+
+    def test_short_profit_2x(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=110.0,
+            initial_tp=80.0,
+            sl=110.0,
+            tp=80.0,
+            type="Short",
+        )
+        pos.exit_price = 80
+        self.assertEqual(pos.calc_profit(), 2.0)
+
+    def test_short_loss(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=110.0,
+            initial_tp=80.0,
+            sl=110.0,
+            tp=80.0,
+            type="Short",
+        )
+        pos.exit_price = 110
+        self.assertEqual(pos.calc_profit(), -1.0)
+
+    def test_short_breakeven(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=110.0,
+            initial_tp=80.0,
+            sl=110.0,
+            tp=80.0,
+            type="Short",
+        )
+        pos.exit_price = 100
+        self.assertEqual(pos.calc_profit(), 0.0)
+
+    def test_zero_risk_long(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=100.0,
+            initial_tp=120.0,
+            sl=100.0,
+            tp=120.0,
+            type="Short",
+        )
+        pos.exit_price = 120
+        self.assertEqual(pos.calc_profit(), 0.0)
+
+    def test_zero_risk_short(self):
+        pos = Position(
+            chart=MagicMock(),
+            strategy=MagicMock(),
+            entry=100.0,
+            initial_sl=100.0,
+            initial_tp=80.0,
+            sl=100.0,
+            tp=80.0,
+            type="Short",
+        )
+        pos.exit_price = 80
+        self.assertEqual(pos.calc_profit(), 0.0)

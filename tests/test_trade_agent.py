@@ -4,7 +4,7 @@ from agents.trade_agent import TradeAgent
 from structs.signal import Signal
 from charts.binance_chart import Timeframe
 
-class TestTradeAgentMulti(unittest.TestCase):
+class TestTradeAgent(unittest.TestCase):
     def setUp(self):
         self.chart1 = MagicMock()
         self.chart1.symbol = "BTCUSDT"
@@ -72,4 +72,81 @@ class TestTradeAgentMulti(unittest.TestCase):
             unittest.mock.call(pos2)
         ])
         self.assertEqual(self.exchange.open_position.call_count, 2)
+
+class TestTradeAgentDuplicateLogic(unittest.TestCase):
+    def setUp(self):
+        # Mock chart
+        self.chart = MagicMock()
+        self.chart.symbol = "BTCUSDT"
+        self.chart.timeframe = "5m"
+        self.chart.have_new_data.return_value = True
+
+        # Mock strategy
+        self.strategy = MagicMock()
+        self.signal = Signal(entry=100, sl=90, tp=120, type="Long")
+        self.strategy.generate_signal.return_value = self.signal
+
+        # Mock exchange
+        self.exchange = MagicMock()
+        self.exchange.open_positions = []
+
+        # Agent
+        self.agent = TradeAgent(charts=[self.chart], strategies=[self.strategy], exchange=self.exchange)
+
+    def test_new_position_added_when_no_duplicate(self):
+        self.agent.analyze()
+        self.exchange.open_position.assert_called_once()
+        new_pos = self.exchange.open_position.call_args[0][0]
+        self.assertEqual(new_pos.chart.symbol, "BTCUSDT")
+        self.assertEqual(new_pos.type, "Long")
+
+    def test_duplicate_position_updates_sl_tp(self):
+        # Create an existing position with same symbol, timeframe, and type
+        existing_pos = MagicMock()
+        existing_pos.chart.symbol = "BTCUSDT"
+        existing_pos.chart.timeframe = "5m"
+        existing_pos.type = "Long"
+        existing_pos.sl = 85
+        existing_pos.tp = 115
+
+        self.exchange.open_positions = [existing_pos]
+
+        self.agent.analyze()
+
+        # Should not call open_position
+        self.exchange.open_position.assert_not_called()
+
+        # Should update SL and TP
+        self.assertEqual(existing_pos.sl, self.signal.sl)
+        self.assertEqual(existing_pos.tp, self.signal.tp)
+
+    def test_different_symbol_does_not_trigger_duplicate(self):
+        other_chart = MagicMock()
+        other_chart.symbol = "ETHUSDT"
+        other_chart.timeframe = "5m"
+
+        existing_pos = MagicMock()
+        existing_pos.chart.symbol = "ETHUSDT"
+        existing_pos.chart.timeframe = "5m"
+        existing_pos.type = "Long"
+
+        self.exchange.open_positions = [existing_pos]
+
+        self.agent.analyze()
+
+        # Should add new BTCUSDT position
+        self.exchange.open_position.assert_called_once()
+
+    def test_different_type_does_not_trigger_duplicate(self):
+        existing_pos = MagicMock()
+        existing_pos.chart.symbol = "BTCUSDT"
+        existing_pos.chart.timeframe = "5m"
+        existing_pos.type = "Short"  # Different type
+
+        self.exchange.open_positions = [existing_pos]
+
+        self.agent.analyze()
+
+        # Should add new Long position
+        self.exchange.open_position.assert_called_once()
 

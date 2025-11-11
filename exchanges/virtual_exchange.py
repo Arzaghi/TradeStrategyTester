@@ -38,7 +38,7 @@ class VirtualExchange(IExchange):
                     # Should update profit
                     pos.exit_price = price
                     pos.exit_reason = "SL Hit"
-                    pos.profit = -1
+                    pos.profit = pos.calc_profit()
                     self._close_position(pos)
                 elif (pos.type == "Long" and price >= pos.tp) or (pos.type == "Short" and price <= pos.tp):
                     # TAKE PROFIT HIT
@@ -46,7 +46,7 @@ class VirtualExchange(IExchange):
                     # Should update profit
                     pos.exit_price = price
                     pos.exit_reason = "TP Hit"
-                    pos.profit = 1
+                    pos.profit = pos.calc_profit()
                     self._close_position(pos)
                 else:
                     still_open.append(pos)

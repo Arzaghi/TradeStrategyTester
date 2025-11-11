@@ -54,6 +54,20 @@ class Position:
 
         return f"{total_hours:02}:{minutes:02}:{seconds:02}"
     
+    def calc_profit(self):
+        if self.type == "Long":
+            risk = self.entry - self.initial_sl
+            if risk == 0:
+                return 0
+            return (self.exit_price - self.entry) / risk
+
+        elif self.type == "Short":
+            risk = self.initial_sl - self.entry
+            if risk == 0:
+                return 0
+            return (self.entry - self.exit_price) / risk
+        return 0
+
     def to_active_position_row(self):
         active_position_row = {
             "id": self.id,

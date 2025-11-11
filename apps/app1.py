@@ -1,6 +1,6 @@
 import logging
 import os
-from strategies.strategy_hammer_candles import StrategyHammerCandles
+from strategies.strategy_fbody_macd import StrategyFullBodyInMacdZones
 from persistence.csv_persistence import CSVPersistence
 from structs.utils import get_git_commit_hash
 from notifiers.telegram_notifier import TelegramNotifier
@@ -17,7 +17,7 @@ class App1:
 
         positions_history_logger = CSVPersistence("/HDD/positions_history.csv", True)
         current_positions_logger = CSVPersistence("/HDD/current_positions.csv", False)
-        strategies = [StrategyHammerCandles()]
+        strategies = [StrategyFullBodyInMacdZones()]
         charts = [BinanceChart(symbol, tf) for symbol in symbols for tf in timeframes]
         self.virtual_exchange = VirtualExchange(telegram_notifier, positions_history_logger, current_positions_logger)
         self.agent = TradeAgent(charts, strategies, self.virtual_exchange)

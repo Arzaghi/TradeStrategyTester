@@ -9,11 +9,6 @@ class HammerCandle(Enum):
     BULLISH_HAMMER = 1
     BEARISH_HAMMER = 2
 
-class HammerCandle(Enum):
-    NON_HAMMER = 0
-    BULLISH_HAMMER = 1
-    BEARISH_HAMMER = 2
-
 class StrategyHammerCandles(IStrategy):
     STRATEGY_NAME = "Simple Hammer"
 
