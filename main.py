@@ -1,13 +1,12 @@
 import time
 import os
 import logging
-from api import BinanceAPI
 from strategies.strategy_hammer_candles import StrategyHammerCandles
-from persistence import PositionsHistoryLogger, CurrentPositionsLogger
+from persistence.persistence_interface import PositionsHistoryLogger, CurrentPositionsLogger
 from utils import get_git_commit_hash
 from notifiers.telegram_notifier import TelegramNotifier
 from chart_analyzer import ChartAnalyzer
-from virtual_exchange import VirtualExchange
+from exchanges.virtual_exchange import VirtualExchange
 from charts.binance_chart import BinanceChart, Timeframe
 
 def main():
@@ -17,7 +16,6 @@ def main():
     timeframes = [Timeframe.MINUTE_15, Timeframe.MINUTE_30, Timeframe.HOURS_1, Timeframe.HOURS_4, Timeframe.DAY_1, Timeframe.WEEK_1]
 
     telegram_notifier = TelegramNotifier(os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHANNEL_ID"))
-    api = BinanceAPI()
     positions_history_logger = PositionsHistoryLogger("/HDD/positions_history.csv")
     current_positions_logger = CurrentPositionsLogger("/HDD/current_positions.csv")
     strategy = StrategyHammerCandles()
