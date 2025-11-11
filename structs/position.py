@@ -67,6 +67,20 @@ class Position:
                 return 0
             return (self.entry - self.exit_price) / risk
         return 0
+    
+    def calc_PNL(self):
+        if self.type == "Long":
+            risk = self.entry - self.initial_sl
+            if risk == 0:
+                return 0
+            return (self.current_price - self.entry) / risk
+
+        elif self.type == "Short":
+            risk = self.initial_sl - self.entry
+            if risk == 0:
+                return 0
+            return (self.entry - self.current_price) / risk
+        return 0
 
     def to_active_position_row(self):
         active_position_row = {
@@ -80,7 +94,7 @@ class Position:
             "initial_sl": self.initial_sl,
             "current_sl":  self.sl,
             "next_tp":  self.tp,
-            "current_profit":  self.profit,
+            "current_profit":  self.calc_PNL(),
             "current_price": self.current_price
         }
         return active_position_row

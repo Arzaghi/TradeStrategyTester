@@ -258,7 +258,7 @@ class TestPositionRowExports(unittest.TestCase):
         self.position.open_timestamp = 1700000000
         self.position.close_timestamp = 1700000360  # +6 minutes
         self.position.exit_price = 108.0
-        self.position.profit = 0.8
+        self.position.profit = 0.8 
         self.position.current_price = 107.5
 
     def test_to_active_position_row(self):
@@ -273,7 +273,7 @@ class TestPositionRowExports(unittest.TestCase):
         self.assertEqual(row["initial_sl"], 95.0)
         self.assertEqual(row["current_sl"], 95.0)
         self.assertEqual(row["next_tp"], 110.0)
-        self.assertEqual(row["current_profit"], 0.8)
+        self.assertEqual(row["current_profit"], 1.5)
         self.assertEqual(row["current_price"], 107.5)
         self.assertEqual(row["open_time"], "2023-11-14 22:13")
 
