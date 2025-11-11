@@ -1,10 +1,18 @@
 from datetime import datetime, timezone
+from typing import Optional
 import unittest
 from unittest.mock import Mock, call, patch
 from exchanges.virtual_exchange import VirtualExchange
+from strategies.strategy_interface import IStrategy
 from structs.position import Position
 from structs.signal import Signal
 from charts.chart_interface import IChart, Timeframe
+
+class DummyStrategy(IStrategy):
+    STRATEGY_NAME = "foolish"
+
+    def generate_signal(self, _: IChart) -> Optional[Signal]:
+        return None
 
 class DummyChart(IChart):
     def __init__(self, symbol="BTCUSDT", timeframe=Timeframe.MINUTE_5, price=100.0):
@@ -38,8 +46,9 @@ class TestVirtualExchange(unittest.TestCase):
     @patch("exchanges.virtual_exchange.get_utc_now_timestamp", return_value=1700000000)
     def test_open_position_sets_status_and_notifies(self, mock_time):
         chart = DummyChart()
+        strategy = DummyStrategy()
         signal = Signal(entry=100, sl=90, tp=110, type="Long")
-        pos = Position.generate_position(chart, signal)
+        pos = Position.generate_position(chart, strategy, signal)
 
         self.exchange.open_position(pos)
 
@@ -52,8 +61,9 @@ class TestVirtualExchange(unittest.TestCase):
     @patch("exchanges.virtual_exchange.get_utc_now_timestamp", return_value=1700000000)
     def test_tick_hits_stop_loss_and_closes_position(self, mock_time):
         chart = DummyChart(price=89.0)
+        strategy = DummyStrategy()
         signal = Signal(entry=100, sl=90, tp=110, type="Long")
-        pos = Position.generate_position(chart, signal)
+        pos = Position.generate_position(chart, strategy, signal)
         
         self.exchange.open_position(pos)
         
@@ -76,8 +86,9 @@ class TestVirtualExchange(unittest.TestCase):
     @patch("exchanges.virtual_exchange.get_utc_now_timestamp", return_value=1700000000)
     def test_tick_hits_take_profit_and_closes_position(self, mock_time):
         chart = DummyChart(price=111.0)
+        strategy = DummyStrategy()
         signal = Signal(entry=100, sl=90, tp=110, type="Long")
-        pos = Position.generate_position(chart, signal)
+        pos = Position.generate_position(chart, strategy, signal)
 
         self.exchange.open_position(pos)
         
@@ -99,8 +110,9 @@ class TestVirtualExchange(unittest.TestCase):
     @patch("exchanges.virtual_exchange.get_utc_now_timestamp", return_value=1700000000)
     def test_tick_keeps_position_open_if_no_hit(self, mock_time):
         chart = DummyChart(price=105.0)
+        strategy = DummyStrategy()
         signal = Signal(entry=100, sl=90, tp=110, type="Long")
-        pos = Position.generate_position(chart, signal)
+        pos = Position.generate_position(chart, strategy, signal)
         self.exchange.open_position(pos)
         self.assertEqual(self.notifier.send_message.call_count, 1)
 
@@ -114,9 +126,10 @@ class TestVirtualExchange(unittest.TestCase):
 
     def test_tick_handles_chart_exception_gracefully(self):
         chart = DummyChart()
+        strategy = DummyStrategy()
         chart.get_current_price = Mock(side_effect=Exception("fail"))
         signal = Signal(entry=100, sl=90, tp=110, type="Long")
-        pos = Position.generate_position(chart, signal)
+        pos = Position.generate_position(chart, strategy, signal)
         self.exchange.open_position(pos)
 
         self.exchange.tick()
@@ -125,8 +138,9 @@ class TestVirtualExchange(unittest.TestCase):
 
     def test_close_position_updates_stats_and_logs(self):
         chart = DummyChart()
+        strategy = DummyStrategy()
         signal = Signal(entry=100, sl=90, tp=110, type="Long")
-        pos = Position.generate_position(chart, signal)
+        pos = Position.generate_position(chart, strategy, signal)
         pos.profit = 0
         self.exchange._close_position(pos)
 

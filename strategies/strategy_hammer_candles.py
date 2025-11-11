@@ -15,7 +15,7 @@ class HammerCandle(Enum):
     BEARISH_HAMMER = 2
 
 class StrategyHammerCandles(IStrategy):
-    STRATEGY_NAME = "Hammer Candle"
+    STRATEGY_NAME = "Simple Hammer"
 
     def _candle_hammer_type(self, open_, high, low, close):
         MIN_SHADOW_TO_BODY_RATIO = 2.0

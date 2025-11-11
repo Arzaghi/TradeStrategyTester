@@ -1,5 +1,4 @@
 from charts.chart_interface import IChart
-from structs.position import Position
 from abc import ABC, abstractmethod
 from typing import Optional
 from structs.signal import Signal

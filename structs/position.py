@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from charts.chart_interface import IChart
+from strategies.strategy_interface import IStrategy
 from structs.signal import Signal
 
 @dataclass
 class Position:
     chart: IChart
+    strategy: IStrategy
     entry: float
     initial_sl: float
     initial_tp: float
@@ -27,8 +29,9 @@ class Position:
         self.id = type(self)._id_counter
 
     @classmethod
-    def generate_position(cls, chart, signal: Signal) -> "Position":
+    def generate_position(cls, chart, strategy: IStrategy, signal: Signal) -> "Position":
         return cls(
+            strategy = strategy,
             chart = chart,
             entry=signal.entry,
             initial_sl=signal.sl,
@@ -54,6 +57,7 @@ class Position:
     def to_active_position_row(self):
         active_position_row = {
             "id": self.id,
+            "strategy": self.strategy.STRATEGY_NAME,
             "type":  self.type,
             "symbol":  self.chart.symbol,
             "interval":  self.chart.timeframe.value,
@@ -69,6 +73,7 @@ class Position:
     
     def to_history_row(self):
         history_row = {
+            "strategy": self.strategy.STRATEGY_NAME,
             "profit": self.profit, 
             "type": self.type, 
             "symbol": self.chart.symbol,

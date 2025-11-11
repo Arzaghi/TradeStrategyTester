@@ -20,6 +20,7 @@ class TradeAgent(ITradeAgent):
                     signal: Signal = strategy.generate_signal(chart)
                     if signal:
                         position = Position.generate_position(chart, signal)
+                        position.strategy = strategy
                         self.exchange.open_position(position)
             except Exception as e:
                 print(f"[{chart.symbol} {chart.timeframe}] Error: {e}")
