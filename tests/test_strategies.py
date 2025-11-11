@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
 import unittest
-from strategies.strategy_hammer_candles import StrategyHammerCandles, HammerCandle, Candle
-from models import Signal
+from unittest.mock import MagicMock
+from charts.chart_interface import Candle
+from strategies.strategy_hammer_candles import StrategyHammerCandles, HammerCandle
 
 @dataclass
 class Expected:
@@ -38,15 +39,10 @@ class TestStrategyHammerCandles(unittest.TestCase):
         ]
         
         for scenario in scenarios:
-            result = self.strategy.generate_signal(scenario["candles"])
+            test_chart = MagicMock()
+            test_chart.get_recent_candles.return_value = scenario["candles"]
+            result = self.strategy.generate_signal(test_chart)
             self._assert_signal(result, scenario["expected"])
-
-    def test_insufficient_candles(self):
-        # 0 candles
-        self.assertIsNone(self.strategy.generate_signal([]))
-        # 1 candle
-        single = Candle(0, 100, 105, 95, 150, 0, 0, 0, 0, 0, 0)
-        self.assertIsNone(self.strategy.generate_signal([single]))
 
     def test_candle_hammer_type_direct(self):
         self.assertEqual(

@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import List
-from charts.chart_interface import Candle
+from typing import Optional
+from charts.chart_interface import IChart
 from models import Signal
 from strategies.strategy_interface import IStrategy
 
@@ -17,7 +17,6 @@ class HammerCandle(Enum):
 
 class StrategyHammerCandles(IStrategy):
     STRATEGY_NAME = "Hammer Candle"
-    REQUIRED_CANDLES = 2 # Current running candle and previous closed candle
 
     def _candle_hammer_type(self, open_, high, low, close):
         MIN_SHADOW_TO_BODY_RATIO = 2.0
@@ -45,8 +44,9 @@ class StrategyHammerCandles(IStrategy):
 
         return HammerCandle.NON_HAMMER
 
-    def generate_signal(self, candles: List[Candle]):
-        if len(candles) < self.REQUIRED_CANDLES:
+    def generate_signal(self, chart: IChart) -> Optional[Signal]:
+        candles = chart.get_recent_candles(2)
+        if len(candles) < 2:
             return None
 
         open_, high, low, close = candles[0].open, candles[0].high, candles[0].low, candles[0].close
