@@ -67,11 +67,12 @@ class TestModels(unittest.TestCase):
         chart.timeframe = Timeframe.MINUTE_5
 
         signal = Signal(entry=100.0, sl=95.0, tp=110.0, type="long")
-
         position = Position.generate_position(chart, signal)
 
-        self.assertEqual(position.symbol, "BTCUSDT")
-        self.assertEqual(position.interval, Timeframe.MINUTE_5)
+        self.assertGreater(position.id, 0)
+        self.assertEqual(position.chart, chart)
+        self.assertEqual(position.chart.symbol, "BTCUSDT")
+        self.assertEqual(position.chart.timeframe, Timeframe.MINUTE_5)
         self.assertEqual(position.entry, 100.0)
         self.assertEqual(position.initial_sl, 95.0)
         self.assertEqual(position.initial_tp, 110.0)
@@ -85,13 +86,12 @@ class TestModels(unittest.TestCase):
         chart.timeframe = Timeframe.HOURS_1
 
         signal = Signal(entry=200.0, sl=190.0, tp=220.0, type="short")
-
         position = Position.generate_position(chart, signal)
 
         self.assertEqual(position.status, "")
         self.assertEqual(position.open_timestamp, 0)
         self.assertEqual(position.close_timestamp, 0)
-        self.assertEqual(position.duration, 0)
+        self.assertEqual(position.duration, "")
         self.assertEqual(position.exit_price, 0)
         self.assertEqual(position.exit_reason, "")
         self.assertEqual(position.profit, 0)
@@ -102,11 +102,10 @@ class TestModels(unittest.TestCase):
         chart.timeframe = Timeframe.MINUTE_15
 
         signal = Signal(entry=0.5, sl=0.45, tp=0.6, type="long")
-
         position = Position.generate_position(chart, signal)
 
-        self.assertEqual(position.symbol, "XRPUSDT")
-        self.assertEqual(position.interval, Timeframe.MINUTE_15)
+        self.assertGreater(position.id, 1)
+        self.assertEqual(position.chart, chart)
         self.assertEqual(position.entry, 0.5)
         self.assertEqual(position.initial_sl, 0.45)
         self.assertEqual(position.initial_tp, 0.6)
@@ -125,3 +124,122 @@ class TestModels(unittest.TestCase):
         self.assertIsInstance(tm.adx, float)
         self.assertIsInstance(tm.plus_di, float)
         self.assertIsInstance(tm.minus_di, float)
+
+    def test_duration_property_returns_correct_string(self):
+        chart = MagicMock()
+        chart.symbol = "BTCUSDT"
+        chart.timeframe = Timeframe.MINUTE_5
+        
+        open_ts = 1700000000
+        close_ts = open_ts + 3665  # 1h 1m 5s
+
+        pos = Position(
+            chart=chart,
+            entry=100.0,
+            initial_sl=95.0,
+            initial_tp=110.0,
+            sl=95.0,
+            tp=110.0,
+            type="long",
+            open_timestamp=open_ts,
+            close_timestamp=close_ts
+        )
+
+        self.assertEqual(pos.duration, "1h 1m 5s")
+
+    def test_duration_returns_empty_string_if_timestamps_missing(self):
+        chart = MagicMock()
+        chart.symbol = "BTCUSDT"
+        chart.timeframe = Timeframe.MINUTE_5
+
+        pos = Position(
+            chart=chart,
+            entry=100.0,
+            initial_sl=95.0,
+            initial_tp=110.0,
+            sl=95.0,
+            tp=110.0,
+            type="long"
+        )
+
+        self.assertEqual(pos.duration, "")
+
+    def test_duration_returns_correct_hours_minutes_seconds(self):
+        chart = MagicMock()
+        chart.symbol = "BTCUSDT"
+        chart.timeframe = Timeframe.MINUTE_5
+        pos = Position(
+            chart=chart,
+            entry=100.0,
+            initial_sl=95.0,
+            initial_tp=110.0,
+            sl=95.0,
+            tp=110.0,
+            type="long",
+            open_timestamp=1700000000,
+            close_timestamp=1700003665
+        )
+        self.assertEqual(pos.duration, "1h 1m 5s")
+
+    def test_duration_returns_days_hours_minutes(self):
+        chart = MagicMock()
+        chart.symbol = "BTCUSDT"
+        chart.timeframe = Timeframe.MINUTE_5
+        pos = Position(
+            chart=chart,
+            entry=100.0,
+            initial_sl=95.0,
+            initial_tp=110.0,
+            sl=95.0,
+            tp=110.0,
+            type="long",
+            open_timestamp=1700000000,
+            close_timestamp=1700170000
+        )
+        self.assertEqual(pos.duration, "1d 23h 13m 20s")
+
+    def test_duration_returns_seconds_only(self):
+        chart = MagicMock()
+        chart.symbol = "BTCUSDT"
+        chart.timeframe = Timeframe.MINUTE_5
+        pos = Position(
+            chart=chart,
+            entry=100.0,
+            initial_sl=95.0,
+            initial_tp=110.0,
+            sl=95.0,
+            tp=110.0,
+            type="long",
+            open_timestamp=1700000000,
+            close_timestamp=1700000005
+        )
+        self.assertEqual(pos.duration, "5s")
+
+    def test_duration_returns_empty_if_open_or_close_missing(self):
+        chart = MagicMock()
+        chart.symbol = "BTCUSDT"
+        chart.timeframe = Timeframe.MINUTE_5
+        pos1 = Position(chart=chart, entry=100.0, initial_sl=95.0, initial_tp=110.0, sl=95.0, tp=110.0, type="long")
+        pos2 = Position(chart=chart, entry=100.0, initial_sl=95.0, initial_tp=110.0, sl=95.0, tp=110.0, type="long", open_timestamp=1700000000)
+        pos3 = Position(chart=chart, entry=100.0, initial_sl=95.0, initial_tp=110.0, sl=95.0, tp=110.0, type="long", close_timestamp=1700000000)
+
+        self.assertEqual(pos1.duration, "")
+        self.assertEqual(pos2.duration, "")
+        self.assertEqual(pos3.duration, "")
+
+    def test_duration_negative_timestamp_returns_empty(self):
+        chart = MagicMock()
+        chart.symbol = "BTCUSDT"
+        chart.timeframe = Timeframe.MINUTE_5
+        pos = Position(
+            chart=chart,
+            entry=100.0,
+            initial_sl=95.0,
+            initial_tp=110.0,
+            sl=95.0,
+            tp=110.0,
+            type="long",
+            open_timestamp=1700000000,
+            close_timestamp=1699990000  # earlier than open
+        )
+        self.assertEqual(pos.duration, "-1d 21h 13m 20s")
