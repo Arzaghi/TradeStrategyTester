@@ -23,11 +23,7 @@ class App1:
         self.agent = TradeAgent(charts, strategies, self.virtual_exchange)
 
         hello_message = (
-            f"Started Version On Server: {get_git_commit_hash()}\n"
-            f"Strategy: Hammer but reverse positions.!\n"
-            f"Number of Charts: {len(charts)}\n"
-            f"Watching Coins: {symbols}\n"
-            f"Watching TimeFrames: {[timeframe.value for timeframe in timeframes]}\n"
+            f"Started Version On Server: {get_git_commit_hash()}"
         )
         logging.info(hello_message)
         telegram_notifier.send_message(hello_message)
