@@ -3,5 +3,5 @@ from structs.position import Position
 
 class ITradeAgent(ABC):
     @abstractmethod
-    def analyze(self) -> Position | None:
+    def analyze(self):
         pass

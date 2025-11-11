@@ -4,77 +4,72 @@ from agents.trade_agent import TradeAgent
 from structs.signal import Signal
 from charts.binance_chart import Timeframe
 
-class TestTradeAgent(unittest.TestCase):
-    def test_analyze_returns_none_if_no_new_data(self):
-        strategy = MagicMock()
-        chart = MagicMock()
-        chart.have_new_data.return_value = False
+class TestTradeAgentMulti(unittest.TestCase):
+    def setUp(self):
+        self.chart1 = MagicMock()
+        self.chart1.symbol = "BTCUSDT"
+        self.chart1.timeframe = Timeframe.MINUTE_5
 
-        agent = TradeAgent(chart, strategy)
-        result = agent.analyze()
+        self.chart2 = MagicMock()
+        self.chart2.symbol = "ETHUSDT"
+        self.chart2.timeframe = Timeframe.MINUTE_15
 
-        self.assertIsNone(result)
-        chart.have_new_data.assert_called_once()
-        strategy.generate_signal.assert_not_called()
+        self.strategy1 = MagicMock()
+        self.strategy2 = MagicMock()
 
-    def test_analyze_returns_none_if_no_signal(self):
-        chart = MagicMock()
-        chart.have_new_data.return_value = True
+        self.exchange = MagicMock()
 
-        strategy = MagicMock()
-        strategy.generate_signal.return_value = None
+    def test_analyze_skips_charts_with_no_new_data(self):
+        self.chart1.have_new_data.return_value = False
+        self.chart2.have_new_data.return_value = False
 
-        agent = TradeAgent(chart, strategy)
-        result = agent.analyze()
+        agent = TradeAgent([self.chart1, self.chart2], [self.strategy1], self.exchange)
+        agent.analyze()
 
-        self.assertIsNone(result)
-        strategy.generate_signal.assert_called_once_with(chart)
+        self.chart1.have_new_data.assert_called_once()
+        self.chart2.have_new_data.assert_called_once()
+        self.strategy1.generate_signal.assert_not_called()
+        self.exchange.open_position.assert_not_called()
 
+    def test_analyze_skips_strategies_that_return_none(self):
+        self.chart1.have_new_data.return_value = True
+        self.chart2.have_new_data.return_value = True
+
+        self.strategy1.generate_signal.return_value = None
+        self.strategy2.generate_signal.return_value = None
+
+        agent = TradeAgent([self.chart1, self.chart2], [self.strategy1, self.strategy2], self.exchange)
+        agent.analyze()
+
+        self.assertEqual(self.strategy1.generate_signal.call_count, 2)
+        self.assertEqual(self.strategy2.generate_signal.call_count, 2)
+        self.exchange.open_position.assert_not_called()
 
     @patch("agents.trade_agent.Position.generate_position")
-    def test_generate_position_called_with_correct_args(self, mock_generate_position):
-        # Arrange
-        chart = MagicMock()
-        chart.symbol = "BTCUSDT"
-        chart.timeframe = Timeframe.MINUTE_5
-        chart.have_new_data.return_value = True
+    def test_analyze_opens_position_for_each_valid_signal(self, mock_generate_position):
+        self.chart1.have_new_data.return_value = True
+        self.chart2.have_new_data.return_value = True
 
-        signal = Signal(entry=100.0, sl=95.0, tp=110.0, type="long")
+        signal1 = Signal(entry=100.0, sl=95.0, tp=110.0, type="long")
+        signal2 = Signal(entry=200.0, sl=190.0, tp=220.0, type="short")
 
-        strategy = MagicMock()
-        strategy.generate_signal.return_value = signal
+        self.strategy1.generate_signal.side_effect = [signal1, None]
+        self.strategy2.generate_signal.side_effect = [None, signal2]
 
-        mock_position = MagicMock()
-        mock_generate_position.return_value = mock_position
+        pos1 = MagicMock()
+        pos2 = MagicMock()
+        mock_generate_position.side_effect = [pos1, pos2]
 
-        agent = TradeAgent(chart, strategy)
+        agent = TradeAgent([self.chart1, self.chart2], [self.strategy1, self.strategy2], self.exchange)
+        agent.analyze()
 
-        result = agent.analyze()
+        mock_generate_position.assert_has_calls([
+            unittest.mock.call(self.chart1, signal1),
+            unittest.mock.call(self.chart2, signal2)
+        ])
+        self.exchange.open_position.assert_has_calls([
+            unittest.mock.call(pos1),
+            unittest.mock.call(pos2)
+        ])
+        self.assertEqual(self.exchange.open_position.call_count, 2)
 
-        mock_generate_position.assert_called_once_with(chart, signal)
-        self.assertEqual(result, mock_position)
-
-    def test_analyze_handles_exception_from_chart(self):
-        chart = MagicMock()
-        chart.have_new_data.side_effect = Exception("chart error")
-
-        strategy = MagicMock()
-
-        agent = TradeAgent(chart, strategy)
-        result = agent.analyze()
-
-        self.assertIsNone(result)
-
-    def test_analyze_handles_exception_from_strategy(self):
-        chart = MagicMock()
-        chart.have_new_data.return_value = True
-        chart.symbol = "BTCUSDT"
-        chart.timeframe = Timeframe.MINUTE_5
-
-        strategy = MagicMock()
-        strategy.generate_signal.side_effect = Exception("strategy error")
-
-        agent = TradeAgent(chart, strategy)
-        result = agent.analyze()
-
-        self.assertIsNone(result)

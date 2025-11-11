@@ -29,8 +29,8 @@ class TestStrategyHammerCandles(unittest.TestCase):
     def test_hammer_scenarios(self):
         dummy_candle = Candle(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         scenarios = [
-            { "candles": [Candle(0, 100, 111, 80, 110, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": Expected(type="Short", entry=110.0, tp=90.0, sl=130.0) },
-            { "candles": [Candle(0, 100, 120, 89, 90, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": Expected(type="Long", entry=90.0, tp=110.0, sl=70.0) },
+            { "candles": [Candle(0, 100, 111, 80, 110, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": Expected(type="Long", entry=110.0, tp=130, sl=90.0) },
+            { "candles": [Candle(0, 100, 120, 89, 90, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": Expected(type="Short", entry=90.0, tp=70.0, sl=110.0) },
             { "candles": [Candle(0, 100, 101, 99, 102, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": None },
             { "candles": [Candle(0, 102, 103, 101, 100, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": None },
             { "candles": [Candle(0, 100, 105, 95, 100, 0, 0, 0, 0, 0, 0), dummy_candle], "expected": None },
@@ -46,11 +46,11 @@ class TestStrategyHammerCandles(unittest.TestCase):
 
     def test_candle_hammer_type_direct(self):
         self.assertEqual(
-            self.strategy._candle_hammer_type(100, 102, 90, 105),
+            self.strategy._candle_hammer_type(100, 111, 80, 110),
             HammerCandle.BULLISH_HAMMER
         )
         self.assertEqual(
-            self.strategy._candle_hammer_type(105, 120, 104, 100),
+            self.strategy._candle_hammer_type(100, 120, 89, 90),
             HammerCandle.BEARISH_HAMMER
         )
         self.assertEqual(
