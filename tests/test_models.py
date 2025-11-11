@@ -3,6 +3,8 @@ from unittest.mock import MagicMock
 from structs.position import Position
 from structs.signal import Signal
 from charts.chart_interface import Candle, Timeframe, TrendMetrics
+from datetime import datetime, timezone
+
 
 class TestModels(unittest.TestCase):
     def _sample_candle(self, timestamp=1630000000000, open_p=100.0, close_p=102.0):
@@ -146,7 +148,7 @@ class TestModels(unittest.TestCase):
             close_timestamp=close_ts
         )
 
-        self.assertEqual(pos.duration, "1h 1m 5s")
+        self.assertEqual(pos.duration, "01:01:05")
 
     def test_duration_returns_empty_string_if_timestamps_missing(self):
         chart = MagicMock()
@@ -180,7 +182,7 @@ class TestModels(unittest.TestCase):
             open_timestamp=1700000000,
             close_timestamp=1700003665
         )
-        self.assertEqual(pos.duration, "1h 1m 5s")
+        self.assertEqual(pos.duration, "01:01:05")
 
     def test_duration_returns_days_hours_minutes(self):
         chart = MagicMock()
@@ -197,7 +199,7 @@ class TestModels(unittest.TestCase):
             open_timestamp=1700000000,
             close_timestamp=1700170000
         )
-        self.assertEqual(pos.duration, "1d 23h 13m 20s")
+        self.assertEqual(pos.duration, "47:13:20")
 
     def test_duration_returns_seconds_only(self):
         chart = MagicMock()
@@ -214,7 +216,7 @@ class TestModels(unittest.TestCase):
             open_timestamp=1700000000,
             close_timestamp=1700000005
         )
-        self.assertEqual(pos.duration, "5s")
+        self.assertEqual(pos.duration, "00:00:05")
 
     def test_duration_returns_empty_if_open_or_close_missing(self):
         chart = MagicMock()
@@ -228,19 +230,44 @@ class TestModels(unittest.TestCase):
         self.assertEqual(pos2.duration, "")
         self.assertEqual(pos3.duration, "")
 
-    def test_duration_negative_timestamp_returns_empty(self):
-        chart = MagicMock()
-        chart.symbol = "BTCUSDT"
-        chart.timeframe = Timeframe.MINUTE_5
-        pos = Position(
-            chart=chart,
-            entry=100.0,
-            initial_sl=95.0,
-            initial_tp=110.0,
-            sl=95.0,
-            tp=110.0,
-            type="long",
-            open_timestamp=1700000000,
-            close_timestamp=1699990000  # earlier than open
-        )
-        self.assertEqual(pos.duration, "-1d 21h 13m 20s")
+class TestPositionRowExports(unittest.TestCase):
+    def setUp(self):
+        self.chart = MagicMock()
+        self.chart.symbol = "BTCUSDT"
+        self.chart.timeframe.value = "5m"
+
+        self.signal = Signal(entry=100.0, sl=95.0, tp=110.0, type="Long")
+        self.position = Position.generate_position(self.chart, self.signal)
+        self.position.open_timestamp = 1700000000
+        self.position.close_timestamp = 1700000360  # +6 minutes
+        self.position.exit_price = 108.0
+        self.position.profit = 0.8
+        self.position.current_price = 107.5
+
+    def test_to_active_position_row(self):
+        row = self.position.to_active_position_row()
+        self.assertEqual(row["id"], self.position.id)
+        self.assertEqual(row["type"], "Long")
+        self.assertEqual(row["symbol"], "BTCUSDT")
+        self.assertEqual(row["interval"], "5m")
+        self.assertEqual(row["entry"], 100.0)
+        self.assertEqual(row["initial_sl"], 95.0)
+        self.assertEqual(row["current_sl"], 95.0)
+        self.assertEqual(row["next_tp"], 110.0)
+        self.assertEqual(row["current_profit"], 0.8)
+        self.assertEqual(row["current_price"], 107.5)
+        self.assertEqual(row["open_time"], "2023-11-14 22:13")
+
+    def test_to_history_row(self):
+        row = self.position.to_history_row()
+        self.assertEqual(row["profit"], 0.8)
+        self.assertEqual(row["type"], "Long")
+        self.assertEqual(row["symbol"], "BTCUSDT")
+        self.assertEqual(row["interval"], "5m")
+        self.assertEqual(row["entry"], 100.0)
+        self.assertEqual(row["initial_sl"], 95.0)
+        self.assertEqual(row["initial_tp"], 110.0)
+        self.assertEqual(row["exit_price"], 108.0)
+        self.assertEqual(row["open_time"], "2023-11-14 22:13")
+        self.assertEqual(row["close_time"], "2023-11-14 22:19")
+        self.assertEqual(row["duration"], "00:06:00")

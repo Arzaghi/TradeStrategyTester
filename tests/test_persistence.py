@@ -83,8 +83,9 @@ class TestCSVPersistence(unittest.TestCase):
 
     def test_write_dict_object(self):
         writer = CSVPersistence(self.file_path, append_mode=True)
-        obj = {"symbol": "XRPUSDT", "entry": 0.5, "type": "long"}
-        writer.write(obj)
+        obj1 = {"symbol": "XRPUSDT", "entry": 0.5, "type": "long"}
+        obj2 = {"symbol": "BTCUSDT", "entry": 110000, "type": "short"}
+        writer.write([obj1, obj2])
 
         with open(self.file_path, "r", encoding="utf-8") as f:
             actual_csv = f.read()
@@ -92,6 +93,7 @@ class TestCSVPersistence(unittest.TestCase):
         expected_csv = (
             "symbol,entry,type\n"
             "XRPUSDT,0.5,long\n"
+            "BTCUSDT,110000,short\n"
         )
         self.assertEqual(actual_csv, expected_csv)
 

@@ -31,6 +31,7 @@ class VirtualExchange(IExchange):
         for pos in self.open_positions:
             try:
                 price = pos.chart.get_current_price()
+                pos.current_price = price
                 if (pos.type == "Long" and price <= pos.sl) or (pos.type == "Short" and price >= pos.sl):
                     # STOP LOSS HIT
                     # Should decide based on strategy
@@ -58,7 +59,7 @@ class VirtualExchange(IExchange):
 
         if self.current_positions_logger:
             try:
-                self.current_positions_logger.write(self.open_positions)
+                self.current_positions_logger.write([op.to_active_position_row() for op in self.open_positions])
             except Exception as e:
                 print(f"[VirtualExchange] Failed to log current positions table: {e}")
 
@@ -80,7 +81,7 @@ class VirtualExchange(IExchange):
 
             if self.positions_history_logger:
                 try:
-                    self.positions_history_logger.write(pos)
+                    self.positions_history_logger.write(pos.to_history_row())
                 except Exception as e:
                     print(f"[VirtualExchange] Failed to log position: {e}")
 

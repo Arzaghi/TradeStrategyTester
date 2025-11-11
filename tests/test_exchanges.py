@@ -65,7 +65,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(pos.exit_reason, "SL Hit")
         self.assertEqual(pos.profit, -1)
         self.assertIn(pos, self.exchange.closed_positions)
-        self.history_logger.write.assert_called_once_with(pos)
+        self.history_logger.write.assert_called_once_with(pos.to_history_row())
         self.notifier.send_message.assert_called()
         self.assertEqual(self.exchange.tp_hits, 0)
         self.assertEqual(self.exchange.sl_hits, 1)
@@ -93,7 +93,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(self.exchange.breakeven_hits, 0)
         self.assertEqual(self.exchange.profits_sum, 1)
         self.assertEqual(self.exchange.n_active_positions, 0)
-        self.history_logger.write.assert_called_once_with(pos)
+        self.history_logger.write.assert_called_once_with(pos.to_history_row())
         self.notifier.send_message.assert_called()
 
     @patch("exchanges.virtual_exchange.get_utc_now_timestamp", return_value=1700000000)
@@ -109,7 +109,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertIn(pos, self.exchange.open_positions)
         self.assertEqual(pos.status, "opened")
         self.history_logger.write.assert_not_called()        
-        self.current_logger.write.assert_called_once_with([pos])
+        self.current_logger.write.assert_called_once_with([pos.to_active_position_row()])
         self.assertEqual(self.notifier.send_message.call_count, 1) # No new call
 
     def test_tick_handles_chart_exception_gracefully(self):
@@ -133,7 +133,7 @@ class TestVirtualExchange(unittest.TestCase):
         self.assertEqual(pos.status, "closed")
         self.assertIn(pos, self.exchange.closed_positions)
         self.assertEqual(self.exchange.breakeven_hits, 1)
-        self.history_logger.write.assert_called_once_with(pos)
+        self.history_logger.write.assert_called_once_with(pos.to_history_row())
         self.notifier.send_message.assert_called()
 
     def test_open_position_none_does_nothing(self):

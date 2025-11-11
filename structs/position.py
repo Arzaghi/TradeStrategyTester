@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from charts.chart_interface import IChart
 from structs.signal import Signal
 
 @dataclass
 class Position:
-    chart: IChart   
+    chart: IChart
     entry: float
     initial_sl: float
     initial_tp: float
@@ -15,10 +15,10 @@ class Position:
     status: str = ""
     open_timestamp: int = 0
     close_timestamp: int = 0
-
     exit_price: float = 0
     exit_reason: str = ""
     profit: float = 0
+    current_price = 0
 
     # class-level counter
     _id_counter: int = 0
@@ -42,18 +42,43 @@ class Position:
     def duration(self) -> str:
         if self.open_timestamp == 0 or self.close_timestamp == 0:
             return ""
-        seconds = self.close_timestamp - self.open_timestamp
-        td = timedelta(seconds=seconds)
-        hours, remainder = divmod(td.seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        days = td.days
-        parts = []
-        if days:
-            parts.append(f"{days}d")
-        if hours:
-            parts.append(f"{hours}h")
-        if minutes:
-            parts.append(f"{minutes}m")
-        if seconds or not parts:
-            parts.append(f"{seconds}s")
-        return " ".join(parts)
+        total_seconds = self.close_timestamp - self.open_timestamp
+        td = timedelta(seconds=total_seconds)
+
+        total_hours = td.days * 24 + td.seconds // 3600
+        minutes = (td.seconds % 3600) // 60
+        seconds = td.seconds % 60
+
+        return f"{total_hours:02}:{minutes:02}:{seconds:02}"
+    
+    def to_active_position_row(self):
+        active_position_row = {
+            "id": self.id,
+            "type":  self.type,
+            "symbol":  self.chart.symbol,
+            "interval":  self.chart.timeframe.value,
+            "open_time":  datetime.fromtimestamp(self.open_timestamp, tz=timezone.utc).strftime("%Y-%m-%d %H:%M"),
+            "entry": self.entry,
+            "initial_sl": self.initial_sl,
+            "current_sl":  self.sl,
+            "next_tp":  self.tp,
+            "current_profit":  self.profit,
+            "current_price": self.current_price
+        }
+        return active_position_row
+    
+    def to_history_row(self):
+        history_row = {
+            "profit": self.profit, 
+            "type": self.type, 
+            "symbol": self.chart.symbol,
+            "interval": self.chart.timeframe.value,
+            "entry": self.entry,
+            "initial_sl": self.initial_sl,
+            "initial_tp": self.initial_tp,
+            "exit_price": self.exit_price,
+            "open_time": datetime.fromtimestamp(self.open_timestamp, tz=timezone.utc).strftime("%Y-%m-%d %H:%M"),
+            "close_time": datetime.fromtimestamp(self.close_timestamp, tz=timezone.utc).strftime("%Y-%m-%d %H:%M"),
+            "duration": self.duration
+        }
+        return history_row
