@@ -10,7 +10,7 @@ class FullBodyCandle(Enum):
     FULL_BODY_RED = 2
 
 class StrategyFullBodyInMacdZones(IStrategy):
-    STRATEGY_NAME = "FBody+MACD"
+    STRATEGY_NAME = "FBdy+MCD"
 
     def _candle_full_body_type(self, open_, high, low, close):
         body = abs(close - open_)

@@ -141,9 +141,9 @@ class TestVirtualExchange(unittest.TestCase):
         strategy = DummyStrategy()
         signal = Signal(entry=100, sl=90, tp=110, type="Long")
         pos = Position.generate_position(chart, strategy, signal)
-        pos.profit = 0
-        self.exchange._close_position(pos)
+        self.exchange._close_position(pos, None, "for test")
 
+        self.assertEqual(pos.exit_reason, "for test")
         self.assertEqual(pos.status, "closed")
         self.assertIn(pos, self.exchange.closed_positions)
         self.assertEqual(self.exchange.breakeven_hits, 1)

@@ -30,24 +30,16 @@ class VirtualExchange(IExchange):
 
         for pos in self.open_positions:
             try:
-                price = pos.chart.get_current_price()
-                pos.current_price = price
-                if (pos.type == "Long" and price <= pos.sl) or (pos.type == "Short" and price >= pos.sl):
+                current_price = pos.chart.get_current_price()
+                pos.current_price = current_price
+                if (pos.type == "Long" and current_price <= pos.sl) or (pos.type == "Short" and current_price >= pos.sl):
                     # STOP LOSS HIT
-                    # Should decide based on strategy
-                    # Should update profit
-                    pos.exit_price = price
-                    pos.exit_reason = "SL Hit"
-                    pos.profit = pos.calc_profit()
-                    self._close_position(pos)
-                elif (pos.type == "Long" and price >= pos.tp) or (pos.type == "Short" and price <= pos.tp):
+                    self._close_position(pos, current_price, "SL Hit")
+                elif (pos.type == "Long" and current_price >= pos.tp) or (pos.type == "Short" and current_price <= pos.tp):
                     # TAKE PROFIT HIT
                     # Should decide based on strategy
                     # Should update profit
-                    pos.exit_price = price
-                    pos.exit_reason = "TP Hit"
-                    pos.profit = pos.calc_profit()
-                    self._close_position(pos)
+                    self._close_position(pos, current_price, "TP Hit")
                 else:
                     still_open.append(pos)
 
@@ -63,9 +55,11 @@ class VirtualExchange(IExchange):
             except Exception as e:
                 print(f"[VirtualExchange] Failed to log current positions table: {e}")
 
-    def _close_position(self, pos: Position):
+    def _close_position(self, pos: Position, exit_price = None, exit_reason: str = ""):
         if pos is not None:
             self.n_active_positions -= 1
+            pos.exit_price = exit_price if exit_price is not None else pos.chart.get_current_price()
+            pos.exit_reason = exit_reason
             pos.close_timestamp = get_utc_now_timestamp()
             pos.status = "closed"
             self.closed_positions.append(pos)

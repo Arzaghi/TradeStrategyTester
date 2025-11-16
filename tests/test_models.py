@@ -256,10 +256,13 @@ class TestPositionRowExports(unittest.TestCase):
         self.signal = Signal(entry=100.0, sl=95.0, tp=110.0, type="Long")
         self.position = Position.generate_position(self.chart, self.strategy, self.signal)
         self.position.open_timestamp = 1700000000
+        
+        self.position.current_price = 98
+        self.position.current_price = 100
+        self.position.current_price = 109
+        
         self.position.close_timestamp = 1700000360  # +6 minutes
         self.position.exit_price = 108.0
-        self.position.profit = 0.8 
-        self.position.current_price = 107.5
 
     def test_to_active_position_row(self):
         row = self.position.to_active_position_row()
@@ -273,14 +276,14 @@ class TestPositionRowExports(unittest.TestCase):
         self.assertEqual(row["initial_sl"], 95.0)
         self.assertEqual(row["current_sl"], 95.0)
         self.assertEqual(row["next_tp"], 110.0)
-        self.assertEqual(row["current_profit"], 1.5)
-        self.assertEqual(row["current_price"], 107.5)
+        self.assertEqual(row["pnl"], 1.8)
+        self.assertEqual(row["current_price"], 109)
         self.assertEqual(row["open_time"], "2023-11-14 22:13")
 
     def test_to_history_row(self):
         row = self.position.to_history_row()
-        self.assertEqual(len(row.keys()), 12)
-        self.assertEqual(row["profit"], 0.8)
+        self.assertEqual(len(row.keys()), 14)
+        self.assertEqual(row["profit"], 1.6)
         self.assertEqual(row["strategy"], "TestStrategy")
         self.assertEqual(row["type"], "Long")
         self.assertEqual(row["symbol"], "BTCUSDT")
@@ -289,14 +292,16 @@ class TestPositionRowExports(unittest.TestCase):
         self.assertEqual(row["initial_sl"], 95.0)
         self.assertEqual(row["initial_tp"], 110.0)
         self.assertEqual(row["exit_price"], 108.0)
+        self.assertEqual(row["initial_tp"], 110.0)
+        self.assertEqual(row["exit_price"], 108.0)
+        self.assertEqual(row["min_pnl"], -0.4)
+        self.assertEqual(row["max_pnl"], 1.8)
         self.assertEqual(row["open_time"], "2023-11-14 22:13")
         self.assertEqual(row["close_time"], "2023-11-14 22:19")
         self.assertEqual(row["duration"], "00:06:00")
 
-import unittest
-from structs.position import Position
 
-class TestCalcProfit(unittest.TestCase):
+class TestProfit(unittest.TestCase):
     def test_long_profit_1x(self):
         pos = Position(
             chart=MagicMock(),
@@ -310,7 +315,7 @@ class TestCalcProfit(unittest.TestCase):
         )
 
         pos.exit_price = 110
-        self.assertEqual(pos.calc_profit(), 1.0)
+        self.assertEqual(pos.profit, 1.0)
 
     def test_long_profit_2x(self):
         pos = Position(
@@ -324,7 +329,7 @@ class TestCalcProfit(unittest.TestCase):
             type="Long",
         )
         pos.exit_price = 120
-        self.assertEqual(pos.calc_profit(), 2.0)
+        self.assertEqual(pos.profit, 2.0)
 
     def test_long_loss(self):
         pos = Position(
@@ -338,7 +343,7 @@ class TestCalcProfit(unittest.TestCase):
             type="Long",
         )
         pos.exit_price = 90
-        self.assertEqual(pos.calc_profit(), -1.0)
+        self.assertEqual(pos.profit, -1.0)
 
     def test_long_breakeven(self):
         pos = Position(
@@ -352,7 +357,7 @@ class TestCalcProfit(unittest.TestCase):
             type="Long",
         )
         pos.exit_price = 100
-        self.assertEqual(pos.calc_profit(), 0.0)
+        self.assertEqual(pos.profit, 0.0)
 
     def test_short_profit_1x(self):
         pos = Position(
@@ -366,7 +371,7 @@ class TestCalcProfit(unittest.TestCase):
             type="Short",
         )
         pos.exit_price = 90
-        self.assertEqual(pos.calc_profit(), 1.0)
+        self.assertEqual(pos.profit, 1.0)
 
     def test_short_profit_2x(self):
         pos = Position(
@@ -380,7 +385,7 @@ class TestCalcProfit(unittest.TestCase):
             type="Short",
         )
         pos.exit_price = 80
-        self.assertEqual(pos.calc_profit(), 2.0)
+        self.assertEqual(pos.profit, 2.0)
 
     def test_short_loss(self):
         pos = Position(
@@ -394,7 +399,7 @@ class TestCalcProfit(unittest.TestCase):
             type="Short",
         )
         pos.exit_price = 110
-        self.assertEqual(pos.calc_profit(), -1.0)
+        self.assertEqual(pos.profit, -1.0)
 
     def test_short_breakeven(self):
         pos = Position(
@@ -408,7 +413,7 @@ class TestCalcProfit(unittest.TestCase):
             type="Short",
         )
         pos.exit_price = 100
-        self.assertEqual(pos.calc_profit(), 0.0)
+        self.assertEqual(pos.profit, 0.0)
 
     def test_zero_risk_long(self):
         pos = Position(
@@ -422,7 +427,7 @@ class TestCalcProfit(unittest.TestCase):
             type="Short",
         )
         pos.exit_price = 120
-        self.assertEqual(pos.calc_profit(), 0.0)
+        self.assertEqual(pos.profit, 0.0)
 
     def test_zero_risk_short(self):
         pos = Position(
@@ -436,4 +441,75 @@ class TestCalcProfit(unittest.TestCase):
             type="Short",
         )
         pos.exit_price = 80
-        self.assertEqual(pos.calc_profit(), 0.0)
+        self.assertEqual(pos.profit, 0.0)
+
+class TestPNL(unittest.TestCase):
+    def setUp(self):
+        self.chart = MagicMock()
+        self.strategy = MagicMock()
+        self.strategy.STRATEGY_NAME = "TestStrategy"
+        self.chart.symbol = "BTCUSDT"
+        self.chart.timeframe.value = "1h"
+
+    def test_long_pnl_updates_and_extremes(self):
+        signal = Signal(entry=100.0, sl=95.0, tp=110.0, type="Long")
+        pos = Position.generate_position(self.chart, self.strategy, signal)
+
+        # Start at entry
+        pos.current_price = 100.0
+        self.assertEqual(pos.pnl, 0.0)
+        self.assertEqual(pos.max_pnl, 0.0)
+        self.assertEqual(pos.min_pnl, 0.0)
+
+        # Price goes up
+        pos.current_price = 110.0
+        self.assertEqual(pos.pnl, 2.0)  # (110-100)/(100-95) = 10/5 = 2
+        self.assertEqual(pos.max_pnl, 2.0)
+        self.assertEqual(pos.min_pnl, 0.0)
+
+        # Price goes down below entry
+        pos.current_price = 90.0
+        self.assertEqual(pos.pnl, -2.0)  # (90-100)/(100-95) = -10/5 = -2
+        self.assertEqual(pos.min_pnl, -2.0)
+        self.assertEqual(pos.max_pnl, 2.0)
+
+    def test_short_pnl_updates_and_extremes(self):
+        signal = Signal(entry=100.0, sl=105.0, tp=90.0, type="Short")
+        pos = Position.generate_position(self.chart, self.strategy, signal)
+
+        # Start at entry
+        pos.current_price = 100.0
+        self.assertEqual(pos.pnl, 0.0)
+        self.assertEqual(pos.max_pnl, 0.0)
+        self.assertEqual(pos.min_pnl, 0.0)
+
+        # Price goes down
+        pos.current_price = 90.0
+        self.assertEqual(pos.pnl, 2.0)
+        self.assertEqual(pos.max_pnl, 2.0)
+        self.assertEqual(pos.min_pnl, 0.0)
+
+        # Price goes up above entry
+        pos.current_price = 102.5
+        self.assertEqual(pos.pnl, -0.5) 
+        self.assertEqual(pos.min_pnl, -0.5)
+        self.assertEqual(pos.max_pnl, 2.0)
+
+    def test_zero_risk_returns_zero(self):
+        # entry == sl → risk = 0
+        signal = Signal(entry=100.0, sl=100.0, tp=110.0, type="Long")
+        pos = Position.generate_position(self.chart, self.strategy, signal)
+
+        pos.current_price = 105.0
+        self.assertEqual(pos.pnl, 0.0)
+        self.assertEqual(pos.max_pnl, 0.0)
+        self.assertEqual(pos.min_pnl, 0.0)
+
+    def test_invalid_type_returns_zero(self):
+        signal = Signal(entry=100.0, sl=95.0, tp=110.0, type="Invalid")
+        pos = Position.generate_position(self.chart, self.strategy, signal)
+
+        pos.current_price = 105.0
+        self.assertEqual(pos.pnl, 0.0)
+        self.assertEqual(pos.max_pnl, 0.0)
+        self.assertEqual(pos.min_pnl, 0.0)

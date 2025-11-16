@@ -83,6 +83,7 @@ class TestTradeAgentDuplicateLogic(unittest.TestCase):
 
         # Mock strategy
         self.strategy = MagicMock()
+        self.strategy.STRATEGY_NAME = "TestStrategy"
         self.signal = Signal(entry=100, sl=90, tp=120, type="Long")
         self.strategy.generate_signal.return_value = self.signal
 
@@ -99,13 +100,15 @@ class TestTradeAgentDuplicateLogic(unittest.TestCase):
         new_pos = self.exchange.open_position.call_args[0][0]
         self.assertEqual(new_pos.chart.symbol, "BTCUSDT")
         self.assertEqual(new_pos.type, "Long")
+        self.assertEqual(new_pos.strategy.STRATEGY_NAME, "TestStrategy")
 
     def test_duplicate_position_updates_sl_tp(self):
-        # Create an existing position with same symbol, timeframe, and type
+        # Existing position with same symbol, timeframe, type, and strategy name
         existing_pos = MagicMock()
         existing_pos.chart.symbol = "BTCUSDT"
         existing_pos.chart.timeframe = "5m"
         existing_pos.type = "Long"
+        existing_pos.strategy.STRATEGY_NAME = "TestStrategy"
         existing_pos.sl = 85
         existing_pos.tp = 115
 
@@ -120,15 +123,27 @@ class TestTradeAgentDuplicateLogic(unittest.TestCase):
         self.assertEqual(existing_pos.sl, self.signal.sl)
         self.assertEqual(existing_pos.tp, self.signal.tp)
 
-    def test_different_symbol_does_not_trigger_duplicate(self):
-        other_chart = MagicMock()
-        other_chart.symbol = "ETHUSDT"
-        other_chart.timeframe = "5m"
+    def test_different_strategy_name_does_not_trigger_duplicate(self):
+        # Existing position with same symbol, timeframe, type but different strategy name
+        existing_pos = MagicMock()
+        existing_pos.chart.symbol = "BTCUSDT"
+        existing_pos.chart.timeframe = "5m"
+        existing_pos.type = "Long"
+        existing_pos.strategy.STRATEGY_NAME = "OtherStrategy"
 
+        self.exchange.open_positions = [existing_pos]
+
+        self.agent.analyze()
+
+        # Should add new position because strategy name differs
+        self.exchange.open_position.assert_called_once()
+
+    def test_different_symbol_does_not_trigger_duplicate(self):
         existing_pos = MagicMock()
         existing_pos.chart.symbol = "ETHUSDT"
         existing_pos.chart.timeframe = "5m"
         existing_pos.type = "Long"
+        existing_pos.strategy.STRATEGY_NAME = "TestStrategy"
 
         self.exchange.open_positions = [existing_pos]
 
@@ -142,6 +157,7 @@ class TestTradeAgentDuplicateLogic(unittest.TestCase):
         existing_pos.chart.symbol = "BTCUSDT"
         existing_pos.chart.timeframe = "5m"
         existing_pos.type = "Short"  # Different type
+        existing_pos.strategy.STRATEGY_NAME = "TestStrategy"
 
         self.exchange.open_positions = [existing_pos]
 
@@ -149,4 +165,3 @@ class TestTradeAgentDuplicateLogic(unittest.TestCase):
 
         # Should add new Long position
         self.exchange.open_position.assert_called_once()
-

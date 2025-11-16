@@ -19,8 +19,21 @@ class Position:
     close_timestamp: int = 0
     exit_price: float = 0
     exit_reason: str = ""
-    profit: float = 0
-    current_price = 0
+    _current_price: float = 0
+    pnl = 0
+    max_pnl = 0
+    min_pnl = 0
+    
+    def get_current_price(self) -> float:
+        return self._current_price
+
+    def set_current_price(self, new_price: float) -> None:
+        self._current_price = new_price
+        self.pnl = self._calc_PNL()
+        self.max_pnl = max(self.max_pnl, self.pnl)
+        self.min_pnl = min(self.min_pnl, self.pnl)
+
+    current_price = property(get_current_price, set_current_price)
 
     # class-level counter
     _id_counter: int = 0
@@ -53,34 +66,25 @@ class Position:
         seconds = td.seconds % 60
 
         return f"{total_hours:02}:{minutes:02}:{seconds:02}"
-    
-    def calc_profit(self):
-        if self.type == "Long":
-            risk = self.entry - self.initial_sl
-            if risk == 0:
-                return 0
-            return (self.exit_price - self.entry) / risk
 
-        elif self.type == "Short":
-            risk = self.initial_sl - self.entry
-            if risk == 0:
-                return 0
-            return (self.entry - self.exit_price) / risk
-        return 0
+    @property
+    def profit(self) -> float:
+        direction = {"Long": 1, "Short": -1}.get(self.type)
+        if direction is None:
+            return 0
+        risk = direction * (self.entry - self.initial_sl)
+        return 0 if risk == 0 else direction * (self.exit_price - self.entry) / risk
     
-    def calc_PNL(self):
-        if self.type == "Long":
-            risk = self.entry - self.initial_sl
-            if risk == 0:
-                return 0
-            return (self.current_price - self.entry) / risk
+    def _calc_PNL(self):
+        direction = {"Long": 1, "Short": -1}.get(self.type)
+        if direction is None:
+            return 0
 
-        elif self.type == "Short":
-            risk = self.initial_sl - self.entry
-            if risk == 0:
-                return 0
-            return (self.entry - self.current_price) / risk
-        return 0
+        risk = direction * (self.entry - self.initial_sl)
+        if risk == 0:
+            return 0
+
+        return direction * (self.current_price - self.entry) / risk
 
     def to_active_position_row(self):
         active_position_row = {
@@ -94,7 +98,7 @@ class Position:
             "initial_sl": self.initial_sl,
             "current_sl":  self.sl,
             "next_tp":  self.tp,
-            "current_profit":  self.calc_PNL(),
+            "pnl":  self.pnl,
             "current_price": self.current_price
         }
         return active_position_row
@@ -110,6 +114,8 @@ class Position:
             "initial_sl": self.initial_sl,
             "initial_tp": self.initial_tp,
             "exit_price": self.exit_price,
+            "min_pnl": self.min_pnl,
+            "max_pnl": self.max_pnl,
             "open_time": datetime.fromtimestamp(self.open_timestamp, tz=timezone.utc).strftime("%Y-%m-%d %H:%M"),
             "close_time": datetime.fromtimestamp(self.close_timestamp, tz=timezone.utc).strftime("%Y-%m-%d %H:%M"),
             "duration": self.duration
