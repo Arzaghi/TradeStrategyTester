@@ -1,6 +1,6 @@
 import logging
 import os
-from strategies.strategy_fbody_macd import StrategyFullBodyInMacdZones
+from strategies.strategy_htf_macd import StrategyHTF_MCD
 from persistence.csv_persistence import CSVPersistence
 from structs.utils import get_git_commit_hash
 from notifiers.telegram_notifier import TelegramNotifier
@@ -11,13 +11,13 @@ from charts.binance_chart import BinanceChart, Timeframe
 class App1:    
     def __init__(self):
         logging.basicConfig(level=logging.INFO)
-        symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "XRPUSDT", "TRXUSDT", "DOGEUSDT", "LINKUSDT", "SUIUSDT", "PAXGUSDT"]
-        timeframes = [Timeframe.MINUTE_15, Timeframe.MINUTE_30, Timeframe.HOURS_1, Timeframe.HOURS_4, Timeframe.DAY_1, Timeframe.WEEK_1]
+        symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "XRPUSDT", "TRXUSDT", "DOGEUSDT", "LINKUSDT", "SUIUSDT"]
+        timeframes = [Timeframe.MINUTE_15, Timeframe.MINUTE_30]
         telegram_notifier = TelegramNotifier(os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHANNEL_ID"))
 
         positions_history_logger = CSVPersistence("/HDD/positions_history.csv", True)
         current_positions_logger = CSVPersistence("/HDD/current_positions.csv", False)
-        strategies = [StrategyFullBodyInMacdZones()]
+        strategies = [StrategyHTF_MCD()]
         charts = [BinanceChart(symbol, tf) for symbol in symbols for tf in timeframes]
         self.virtual_exchange = VirtualExchange(telegram_notifier, positions_history_logger, current_positions_logger)
         self.agent = TradeAgent(charts, strategies, self.virtual_exchange)

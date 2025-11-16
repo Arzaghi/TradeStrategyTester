@@ -29,7 +29,7 @@ class TradeAgent(ITradeAgent):
                                 new_position.chart.timeframe == open_pos.chart.timeframe and 
                                 new_position.type == open_pos.type and
                                 new_position.strategy.STRATEGY_NAME == open_pos.strategy.STRATEGY_NAME
-                                ):
+                            ):
                                 open_pos.sl = new_position.sl
                                 open_pos.tp = new_position.tp
                                 duplicate_found = True

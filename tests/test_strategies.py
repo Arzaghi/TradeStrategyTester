@@ -2,9 +2,10 @@ from dataclasses import dataclass
 from typing import Optional
 import unittest
 from unittest.mock import MagicMock
-from charts.chart_interface import Candle, TrendDirection
+from charts.chart_interface import Candle, TrendDirection, Timeframe
 from strategies.strategy_hammer_candles import StrategyHammerCandles, HammerCandle
 from strategies.strategy_fbody_macd import StrategyFullBodyInMacdZones, FullBodyCandle
+from strategies.strategy_htf_macd import StrategyHTF_MCD
 from structs.signal import Signal
 
 @dataclass
@@ -59,7 +60,6 @@ class TestStrategyHammerCandles(unittest.TestCase):
             self.strategy._candle_hammer_type(100, 101, 99, 102),
             HammerCandle.NON_HAMMER
         )
-
 
 class TestStrategyFullBodyInMacdZones(unittest.TestCase):
     def setUp(self):
@@ -135,4 +135,157 @@ class TestStrategyFullBodyInMacdZones(unittest.TestCase):
         chart.get_macd_trend.return_value = TrendDirection.NEUTRAL
 
         signal = self.strategy.generate_signal(chart)
+        self.assertIsNone(signal)
+
+class TestStrategyHTF_MCD(unittest.TestCase):
+    def setUp(self):
+        self.strategy = StrategyHTF_MCD()
+
+        self.chart = MagicMock()
+        self.chart.symbol = "BTCUSDT"
+        self.chart.timeframe = Timeframe.MINUTE_15
+        self.chart.get_macd_trend = MagicMock(return_value=TrendDirection.UPTREND)
+
+        def mock_chart(symbol, tf):
+            mock = MagicMock()
+            mock.symbol = symbol
+            mock.timeframe = tf
+            mock.get_macd_trend = MagicMock(return_value=TrendDirection.UPTREND)
+            return mock
+
+        # Patch type(chart) to return mock_chart
+        self.chart_type = MagicMock(side_effect=mock_chart)
+        self.strategy._get_higher_timeframes_macd_trend.__globals__["type"] = lambda obj: self.chart_type
+
+    def test_signal_long_full_body_green_uptrend(self):
+        # Setup candle with full body green
+        candle = MagicMock()
+        candle.open = 100
+        candle.high = 120
+        candle.low = 99
+        candle.close = 119
+
+        self.chart.get_recent_candles.return_value = [candle, MagicMock()]
+        self.chart.get_macd_trend.return_value = TrendDirection.UPTREND
+
+        signal = self.strategy.generate_signal(self.chart)
+        self.assertIsInstance(signal, Signal)
+        self.assertEqual(signal.type, "Long")
+        self.assertEqual(signal.entry, 119)
+        self.assertEqual(signal.sl, 100)
+        self.assertEqual(signal.tp, 119 + (119 - 100) * 3)
+
+    def test_signal_short_full_body_red_downtrend(self):
+        self.chart.timeframe = Timeframe.MINUTE_30
+
+        candle = MagicMock()
+        candle.open = 100
+        candle.high = 101
+        candle.low = 79
+        candle.close = 80
+
+        self.chart.get_recent_candles.return_value = [candle, MagicMock()]
+        self.chart.get_macd_trend.return_value = TrendDirection.DOWNTREND
+
+        def mock_chart(symbol, tf):
+            mock = MagicMock()
+            mock.symbol = symbol
+            mock.timeframe = tf
+            mock.get_macd_trend = MagicMock(return_value=TrendDirection.DOWNTREND)
+            return mock
+
+        # Patch type(chart) to return mock_chart
+        self.chart_type = MagicMock(side_effect=mock_chart)
+        self.strategy._get_higher_timeframes_macd_trend.__globals__["type"] = lambda obj: self.chart_type
+
+        signal = self.strategy.generate_signal(self.chart)
+        self.assertIsInstance(signal, Signal)
+        self.assertEqual(signal.type, "Short")
+        self.assertEqual(signal.entry, 80)
+        self.assertEqual(signal.sl, 100)
+        self.assertEqual(signal.tp, 80 - 3 * (100 - 80))
+
+    def test_no_signal_if_not_full_body(self):
+        candle = MagicMock()
+        candle.open = 100
+        candle.high = 105
+        candle.low = 99
+        candle.close = 101  # Small body, large shadows
+
+        self.chart.get_recent_candles.return_value = [candle, MagicMock()]
+        self.chart.get_macd_trend.return_value = TrendDirection.UPTREND
+
+        signal = self.strategy.generate_signal(self.chart)
+        self.assertIsNone(signal)
+
+    def test_no_signal_if_macd_neutral(self):
+        candle = MagicMock()
+        candle.open = 100
+        candle.high = 105
+        candle.low = 99
+        candle.close = 104
+
+        self.chart.get_recent_candles.return_value = [candle, MagicMock()]
+        self.chart.get_macd_trend.return_value = TrendDirection.NEUTRAL
+
+        signal = self.strategy.generate_signal(self.chart)
+        self.assertIsNone(signal)
+
+    def test_no_signal_if_higher_timeframes_not_agreed1(self):
+        # Setup a full body green candle
+        candle = MagicMock()
+        candle.open = 100
+        candle.high = 120
+        candle.low = 99
+        candle.close = 119
+
+        self.chart.get_recent_candles.return_value = [candle, MagicMock()]
+        self.chart.get_macd_trend.return_value = TrendDirection.UPTREND
+
+        # Simulate mixed higher timeframe trends: one UPTREND, one DOWNTREND
+        def mock_chart(symbol, tf):
+            mock = MagicMock()
+            mock.symbol = symbol
+            mock.timeframe = tf
+            mock.get_macd_trend = MagicMock(return_value=TrendDirection.DOWNTREND)
+            return mock
+
+        self.chart_type = MagicMock(side_effect=mock_chart)
+        self.strategy._get_higher_timeframes_macd_trend.__globals__["type"] = lambda obj: self.chart_type
+
+        signal = self.strategy.generate_signal(self.chart)
+        self.assertIsNone(signal)
+
+    def test_no_signal_if_higher_timeframes_not_agreed2(self):
+        # Setup a full body red candle
+        candle = MagicMock()
+        candle.open = 100
+        candle.high = 101
+        candle.low = 79
+        candle.close = 80
+
+        self.chart.get_recent_candles.return_value = [candle, MagicMock()]
+        self.chart.get_macd_trend.return_value = TrendDirection.DOWNTREND
+
+        def mock_chart(symbol, tf):
+            mock = MagicMock()
+            mock.symbol = symbol
+            mock.timeframe = tf
+            mock.get_macd_trend = MagicMock(return_value=TrendDirection.UPTREND)
+            return mock
+
+        self.chart_type = MagicMock(side_effect=mock_chart)
+        self.strategy._get_higher_timeframes_macd_trend.__globals__["type"] = lambda obj: self.chart_type
+
+        signal = self.strategy.generate_signal(self.chart)
+        self.assertIsNone(signal)
+
+    def test_no_signal_if_not_enough_candles(self):
+        self.chart.get_recent_candles.return_value = [MagicMock()]
+        signal = self.strategy.generate_signal(self.chart)
+        self.assertIsNone(signal)
+
+    def test_no_signal_if_timeframe_not_supported(self):
+        self.chart.timeframe = Timeframe.MINUTE_5
+        signal = self.strategy.generate_signal(self.chart)
         self.assertIsNone(signal)
