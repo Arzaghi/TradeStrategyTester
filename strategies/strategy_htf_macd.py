@@ -29,7 +29,7 @@ class StrategyHTF_MCD(IStrategy):
             new_chart = chart_cls(chart.symbol, tf)
             trend = new_chart.get_macd_trend()
             higher_tfs_trends.add(trend)
-        print(higher_tfs_trends)
+            
         if higher_tfs_trends == {TrendDirection.UPTREND}:
             return TrendDirection.UPTREND
         if higher_tfs_trends == {TrendDirection.DOWNTREND}:

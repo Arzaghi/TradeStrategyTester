@@ -1,5 +1,6 @@
-import logging
 import os
+
+from config import config
 from strategies.strategy_htf_macd import StrategyHTF_MCD
 from persistence.csv_persistence import CSVPersistence
 from structs.utils import get_git_commit_hash
@@ -10,7 +11,6 @@ from charts.binance_chart import BinanceChart, Timeframe
 
 class App1:    
     def __init__(self):
-        logging.basicConfig(level=logging.INFO)
         symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "XRPUSDT", "TRXUSDT", "DOGEUSDT", "LINKUSDT", "SUIUSDT"]
         timeframes = [Timeframe.MINUTE_15, Timeframe.MINUTE_30]
         telegram_notifier = TelegramNotifier(os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHANNEL_ID"))
@@ -25,7 +25,6 @@ class App1:
         hello_message = (
             f"Started Version On Server: {get_git_commit_hash()}"
         )
-        logging.info(hello_message)
         telegram_notifier.send_message(hello_message)
 
     def tick(self):

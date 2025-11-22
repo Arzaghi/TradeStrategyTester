@@ -1,13 +1,20 @@
 import time
 import logging
 from apps.app1 import App1
+from config import config
 
 def main():
     logging.basicConfig(level=logging.INFO)
+    config._config_file = "/HDD/config.ini"
+    config.reload()
+    if config.general.get("init", "0") == "0":
+        logging.error("Could not load config.ini")
+        return
 
     app = App1()
     try:
         while True:
+            config.reload()
             app.tick()
             time.sleep(1)
     except KeyboardInterrupt:
