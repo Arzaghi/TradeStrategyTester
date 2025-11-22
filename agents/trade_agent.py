@@ -1,3 +1,4 @@
+from config import config
 from agents.agent_interface import ITradeAgent
 from charts.chart_interface import IChart
 from exchanges.exchange_interface import IExchange
@@ -13,6 +14,10 @@ class TradeAgent(ITradeAgent):
         self.exchange = exchange
 
     def analyze(self):
+        # todo
+        # if not config.enabled("agent.analyze"):
+        #     return
+        
         for chart in self.charts:
             try:
                 if not chart.have_new_data():

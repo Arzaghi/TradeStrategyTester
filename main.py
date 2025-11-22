@@ -7,7 +7,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     config._config_file = "/HDD/config.ini"
     config.reload()
-    if config.general.get("init", "0") == "0":
+    if not config.enabled("general.init"):
         logging.error("Could not load config.ini")
         return
 

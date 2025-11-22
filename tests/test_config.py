@@ -13,6 +13,11 @@ class TestConfig(unittest.TestCase):
             [general]
             name = HeLLoWoRLd
             version = 1.2.3
+            
+            [agent]
+            analyze = 0
+            long = 1
+            short = 0
 
             [database]
             HOST = LOCALHOST
@@ -72,12 +77,18 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config.get_value("database.port", "fallback"), "5432")
         self.assertEqual(config.get_value("mixed.key1", "fallback"), "value")
         self.assertEqual(config.get_value("mixed.key2", "fallback"), "mixedcase")
+        self.assertFalse(config.enabled("agent.analyze"))
+        self.assertTrue(config.enabled("agent.long"))
+        self.assertFalse(config.enabled("agent.short"))
 
         self.assertEqual(config.get_value("general.missing", "FALLBACK"), "fallback")
         self.assertEqual(config.get_value("database.missing", "FALLBACK"), "fallback")
 
         self.assertEqual(config.get_value("nosuch.key", "FALLBACK"), "fallback")
 
-        # no dot in path → return default
-        self.assertEqual(config.get_value("invalidpath", "FALLBACK"), "fallback")
-        self.assertEqual(config.get_value("", "FALLBACK"), "fallback")
+        # no dot in path → should raise ValueError
+        with self.assertRaises(ValueError):
+            config.get_value("invalidpath", "FALLBACK")
+
+        with self.assertRaises(ValueError):
+            config.get_value("", "FALLBACK")

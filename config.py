@@ -30,10 +30,13 @@ class Config:
     
     def get_value(self, path: str, default : str) -> str:
         if "." not in path:
-            return default.lower()
+            raise ValueError(f"Invalid path '{path}': must contain a '.' separating section and key")
 
         section, key = path.split(".", 1)
         return self.get(section, key, default)
+    
+    def enabled(self, path: str) -> bool:
+        return True if self.get_value(path, "0") == "1" else False
 
 
 class ConfigSection:
