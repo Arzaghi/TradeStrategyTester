@@ -69,6 +69,9 @@ jobs:
           echo "Creating persistent hdd folder on host..."
           mkdir -p /trader_bot_hdd
 
+          echo "Copying config.ini to host folder..."
+          cp config.ini /trader_bot_hdd/config.ini
+
           echo "Stopping existing container if running..."
           if docker ps -q -f name=traderBot; then
             docker stop traderBot || echo "Failed to stop traderBot"
