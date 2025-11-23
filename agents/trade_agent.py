@@ -14,9 +14,8 @@ class TradeAgent(ITradeAgent):
         self.exchange = exchange
 
     def analyze(self):
-        # todo
-        # if not config.enabled("agent.analyze"):
-        #     return
+        if not config.enabled("agent.analyze"):
+            return
         
         for chart in self.charts:
             try:
@@ -25,7 +24,13 @@ class TradeAgent(ITradeAgent):
                 
                 for strategy in self.strategies: 
                     signal: Signal | None = strategy.generate_signal(chart)
-                    if signal:
+                    if (
+                        signal and 
+                        (
+                            (signal.type == "Long" and config.enabled("agent.long")) or 
+                            (signal.type == "Short" and config.enabled("agent.short"))
+                        )
+                    ):
                         new_position = Position.generate_position(chart, strategy, signal)
 
                         duplicate_found = False
