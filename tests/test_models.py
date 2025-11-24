@@ -496,7 +496,7 @@ class TestPNL(unittest.TestCase):
         self.assertEqual(pos.max_pnl, 2.0)
 
     def test_zero_risk_returns_zero(self):
-        # entry == sl → risk = 0
+        # entry == sl -> risk = 0
         signal = Signal(entry=100.0, sl=100.0, tp=110.0, type="Long")
         pos = Position.generate_position(self.chart, self.strategy, signal)
 

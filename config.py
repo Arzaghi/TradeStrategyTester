@@ -1,5 +1,8 @@
 import configparser
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Config:
     _instance = None
@@ -25,8 +28,10 @@ class Config:
             if key is None:
                 return ConfigSection(self._parser[section])
             value = self._parser[section].get(key, default)
-            return value.lower() if isinstance(value, str) else value
-        return default.lower()
+            result = value.lower() if isinstance(value, str) else value
+            logger.info(f"Reading config: {section}.{key}, result: '{result}'")
+            return result
+        return default.lower() if isinstance(default, str) else default
     
     def get_value(self, path: str, default : str) -> str:
         if "." not in path:

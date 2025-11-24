@@ -1,3 +1,4 @@
+import logging
 from exchanges.exchange_interface import IExchange
 from structs.position import Position
 from structs.utils import get_utc_now_timestamp
@@ -44,7 +45,7 @@ class VirtualExchange(IExchange):
                     still_open.append(pos)
 
             except Exception as e:
-                print(f"[VirtualExchange] Error checking {pos.chart.symbol}:{pos.chart.timeframe.value}: {e}")
+                logging.info(f"[VirtualExchange] Error checking {pos.chart.symbol}:{pos.chart.timeframe.value}: {e}")
                 still_open.append(pos)
 
         self.open_positions = still_open
@@ -53,7 +54,7 @@ class VirtualExchange(IExchange):
             try:
                 self.current_positions_logger.write([op.to_active_position_row() for op in self.open_positions])
             except Exception as e:
-                print(f"[VirtualExchange] Failed to log current positions table: {e}")
+                logging.info(f"[VirtualExchange] Failed to log current positions table: {e}")
 
     def _close_position(self, pos: Position, exit_price = None, exit_reason: str = ""):
         if pos is not None:
@@ -77,7 +78,7 @@ class VirtualExchange(IExchange):
                 try:
                     self.positions_history_logger.write(pos.to_history_row())
                 except Exception as e:
-                    print(f"[VirtualExchange] Failed to log position: {e}")
+                    logging.info(f"[VirtualExchange] Failed to log position: {e}")
 
             self._notify_close(pos)
 
@@ -107,8 +108,8 @@ class VirtualExchange(IExchange):
             if self.notifier:
                 self.notifier.send_message(message)
         except Exception as e:
-            print(f"[VirtualExchange] Failed to send following message to telegram: {e}")
-            print(message)
+            logging.info(f"[VirtualExchange] Failed to send following message to telegram: {e}")
+            logging.info(f"Message content: {message}")
 
     def _notify_close(self, pos: Position):
         if self.notifier is None:
@@ -124,7 +125,7 @@ class VirtualExchange(IExchange):
             f"Symbol: *{pos.chart.symbol}*\n"
             f"Timeframe: *{pos.chart.timeframe.value}*\n"
             f"Profit: *{pos.profit}*\n"
-            f"`{pos.entry:.4f}` → `{pos.exit_price:.4f}`\n"
+            f"`{pos.entry:.4f}` -> `{pos.exit_price:.4f}`\n"
             f"Duration: `{pos.duration}`\n\n\n"
             f"📊 *Stats*\n"
             f"Closed: `{nclosed}`\n"
@@ -137,5 +138,5 @@ class VirtualExchange(IExchange):
         try:
             self.notifier.send_message(message)
         except Exception as e:
-            print(f"[VirtualExchange] Failed to send following message to telegram: {e}")
-            print(message)
+            logging.info(f"[VirtualExchange] Failed to send following message to telegram: {e}")
+            logging.info(f"Message content: {message}")

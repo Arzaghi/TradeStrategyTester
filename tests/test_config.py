@@ -86,7 +86,7 @@ class TestConfig(unittest.TestCase):
 
         self.assertEqual(config.get_value("nosuch.key", "FALLBACK"), "fallback")
 
-        # no dot in path → should raise ValueError
+        # no dot in path -> should raise ValueError
         with self.assertRaises(ValueError):
             config.get_value("invalidpath", "FALLBACK")
 

@@ -1,3 +1,4 @@
+import logging
 import requests
 from notifiers.notifier_interface import INotifier
 
@@ -19,5 +20,5 @@ class TelegramNotifier(INotifier):
             response.raise_for_status()
             return True
         except Exception as e:
-            print(f"[TelegramNotifier] Failed to send message to telegram:\n{text}\n")
+            logging.info(f"[TelegramNotifier] Failed to send message to telegram:\n{text}\n")
             return False

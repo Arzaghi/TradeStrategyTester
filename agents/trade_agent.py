@@ -1,3 +1,4 @@
+import logging
 from config import config
 from agents.agent_interface import ITradeAgent
 from charts.chart_interface import IChart
@@ -48,4 +49,4 @@ class TradeAgent(ITradeAgent):
                         if not duplicate_found:
                             self.exchange.open_position(new_position)
             except Exception as e:
-                print(f"[{chart.symbol} {chart.timeframe}] Error: {e}")
+                logging.info(f"[{chart.symbol} {chart.timeframe}] Error: {e}")
